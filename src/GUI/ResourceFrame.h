@@ -17,6 +17,7 @@ class ResourceFrame : public wxFrame
 		ID_TREE_ADD_SOUND = 1003,
 		ID_TREE_ADD_FONT = 1004,
 		ID_TREE_REMOVE_ITEM = 1005,
+		ID_TREE_RENAME_ITEM = 1006,
 	};
 
 public:
@@ -27,6 +28,7 @@ public:
 	std::map<std::string, wxTreeItemId> mItems;
 	wxTreeCtrl* mResourceTree;
 	ResourceManifest mResourceManifest;
+	std::string mItemStrEditingNow;
 
 private:
 	void OnNewFile(wxCommandEvent& event);
@@ -36,6 +38,8 @@ private:
 	void OnExit(wxCommandEvent& event);
 	void OnAbout(wxCommandEvent& event);
 	void OnTreeRightClick(wxTreeEvent& event);
+	void OnItemRenameStart(wxTreeEvent& event);
+	void OnItemRenameEnd(wxTreeEvent& event);
 	void AddGroup(wxCommandEvent& event);
 	void AddImage(wxCommandEvent& event);
 	void AddSound(wxCommandEvent& event);
@@ -45,4 +49,5 @@ private:
 	void AddSoundImpl(std::string theName, std::string theGroup);
 	void AddFontImpl(std::string theName, std::string theGroup);
 	void DeleteItem(wxCommandEvent& event);
+	void RenameItem(wxCommandEvent& event);
 };

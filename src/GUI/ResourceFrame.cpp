@@ -32,7 +32,7 @@ ResourceFrame::ResourceFrame()
 
     wxPanel* leftPanel = new wxPanel(splitter);
 
-    mResourceTree = new wxTreeCtrl(leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_DEFAULT_STYLE);
+    mResourceTree = new wxTreeCtrl(leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_DEFAULT_STYLE | wxTR_EDIT_LABELS);
     mResourceTree->Bind(wxEVT_TREE_ITEM_RIGHT_CLICK,
         &ResourceFrame::OnTreeRightClick, this);
 
@@ -58,6 +58,8 @@ ResourceFrame::ResourceFrame()
     Bind(wxEVT_MENU, &ResourceFrame::OnGenerateSourceFile, this, ID_FILE_GENERATE_SRC);
     Bind(wxEVT_MENU, &ResourceFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &ResourceFrame::OnExit, this, wxID_EXIT);
+    Bind(wxEVT_TREE_BEGIN_LABEL_EDIT, &ResourceFrame::OnItemRenameStart, this);
+    Bind(wxEVT_TREE_END_LABEL_EDIT, &ResourceFrame::OnItemRenameEnd, this);
 }
 
 ResourceFrame::~ResourceFrame()
@@ -106,7 +108,84 @@ void ResourceFrame::OnOpenFile(wxCommandEvent& event)
             AddFontImpl(font.first, group.first);
         }
     }
+}
 
+void ResourceFrame::OnItemRenameStart(wxTreeEvent& event)
+{
+    mItemStrEditingNow = event.GetLabel();
+}
+
+void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
+{
+    std::string aNewName = event.GetLabel();
+
+    wxTreeItemId hoveredItem = event.GetItem();
+
+    mResourceTree->SelectItem(hoveredItem);
+
+    ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(hoveredItem);
+
+    if (data->type == ResourceType::TYPE_GROUP)
+    {
+        if (mResourceManifest.mGroupMap.count(aNewName))
+        {
+            wxLogError("You cannot name 2 groups the same");
+            event.SetLabel(mItemStrEditingNow);
+            return;
+        }
+    }
+    else if (data->type == ResourceType::TYPE_RESOURCE)
+    {
+        if (mResourceManifest.mGroupMap[data->parent].mImageMap.count(aNewName) || mResourceManifest.mGroupMap[data->parent].mSoundMap.count(aNewName) || mResourceManifest.mGroupMap[data->parent].mFontMap.count(aNewName))
+        {
+            wxLogError("You cannot name 2 resources the same");
+            event.SetLabel(mItemStrEditingNow);
+            return;
+        }
+    }
+    else
+    {
+        event.SetLabel(mItemStrEditingNow);
+        return;
+    }
+
+
+    data->id = aNewName;
+
+    mItems[aNewName] = mItems[mItemStrEditingNow];
+    mItems.erase(mItemStrEditingNow);
+
+    if (data->type == ResourceType::TYPE_GROUP)
+    {
+        mResourceManifest.mGroupMap[aNewName] = mResourceManifest.mGroupMap[mItemStrEditingNow];
+        mResourceManifest.mGroupMap.erase(mItemStrEditingNow);
+        wxTreeItemIdValue cookie;
+        wxTreeItemId ch = mResourceTree->GetFirstChild(hoveredItem, cookie);
+        while (ch.IsOk()) 
+        {
+            ResourceItemData* childData = (ResourceItemData*)mResourceTree->GetItemData(ch);
+            childData->parent = aNewName;
+            ch = mResourceTree->GetNextSibling(hoveredItem);
+        }
+    }
+    else if (data->type == ResourceType::TYPE_RESOURCE)
+    {
+        if (mResourceManifest.mGroupMap[data->parent].mImageMap.count(mItemStrEditingNow))
+        {
+            mResourceManifest.mGroupMap[data->parent].mImageMap[aNewName] = mResourceManifest.mGroupMap[data->parent].mImageMap[mItemStrEditingNow];
+            mResourceManifest.mGroupMap[data->parent].mImageMap.erase(mItemStrEditingNow);
+        }
+        else if (mResourceManifest.mGroupMap[data->parent].mSoundMap.count(mItemStrEditingNow))
+        {
+            mResourceManifest.mGroupMap[data->parent].mSoundMap[aNewName] = mResourceManifest.mGroupMap[data->parent].mSoundMap[mItemStrEditingNow];
+            mResourceManifest.mGroupMap[data->parent].mSoundMap.erase(mItemStrEditingNow);
+        }
+        else if (mResourceManifest.mGroupMap[data->parent].mFontMap.count(mItemStrEditingNow))
+        {
+            mResourceManifest.mGroupMap[data->parent].mFontMap[aNewName] = mResourceManifest.mGroupMap[data->parent].mFontMap[mItemStrEditingNow];
+            mResourceManifest.mGroupMap[data->parent].mFontMap.erase(mItemStrEditingNow);
+        }
+    }
 }
 
 void ResourceFrame::OnSaveFile(wxCommandEvent& event)
@@ -147,10 +226,12 @@ void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
         menu.Append(ID_TREE_ADD_SOUND, "Add Sound");
         menu.Append(ID_TREE_ADD_FONT, "Add Font");
         menu.AppendSeparator();
+        menu.Append(ID_TREE_RENAME_ITEM, "Rename");
         menu.Append(ID_TREE_REMOVE_ITEM, "Delete");
     }
     else
     {
+        menu.Append(ID_TREE_RENAME_ITEM, "Rename");
         menu.Append(ID_TREE_REMOVE_ITEM, "Delete");
     }
 
@@ -159,6 +240,7 @@ void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
     Bind(wxEVT_MENU, &ResourceFrame::AddSound, this, ID_TREE_ADD_SOUND);
     Bind(wxEVT_MENU, &ResourceFrame::AddFont, this, ID_TREE_ADD_FONT);
     Bind(wxEVT_MENU, &ResourceFrame::DeleteItem, this, ID_TREE_REMOVE_ITEM);
+    Bind(wxEVT_MENU, &ResourceFrame::RenameItem, this, ID_TREE_RENAME_ITEM);
 
     PopupMenu(&menu);
 }
@@ -181,10 +263,11 @@ void ResourceFrame::AddImage(wxCommandEvent& event)
     if (!root)
         return;
 
-    wxTreeItemId newItem = mResourceTree->AppendItem(root, "IMAGE_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData("IMAGE_NEW", ResourceType::TYPE_RESOURCE));
-
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+
+    wxTreeItemId newItem = mResourceTree->AppendItem(root, "IMAGE_NEW");
+    mResourceTree->SetItemData(newItem, new ResourceItemData("IMAGE_NEW", ResourceType::TYPE_RESOURCE, data->id));
+
     mItems["IMAGE_NEW"] = newItem;
     mResourceManifest.AddFont(data->id, "IMAGE_NEW");
 }
@@ -195,9 +278,10 @@ void ResourceFrame::AddSound(wxCommandEvent& event)
     if (!root)
         return;
 
-    wxTreeItemId newItem = mResourceTree->AppendItem(root, "SOUND_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData("SOUND_NEW", ResourceType::TYPE_RESOURCE));
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+    wxTreeItemId newItem = mResourceTree->AppendItem(root, "SOUND_NEW");
+    mResourceTree->SetItemData(newItem, new ResourceItemData("SOUND_NEW", ResourceType::TYPE_RESOURCE, data->id));
+
     mItems["SOUND_NEW"] = newItem;
     mResourceManifest.AddSound(data->id, "SOUND_NEW");
 }
@@ -208,10 +292,10 @@ void ResourceFrame::AddFont(wxCommandEvent& event)
     if (!root)
         return;
 
-    wxTreeItemId newItem = mResourceTree->AppendItem(root, "FONT_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData("FONT_NEW", ResourceType::TYPE_RESOURCE));
-
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+    wxTreeItemId newItem = mResourceTree->AppendItem(root, "FONT_NEW");
+    mResourceTree->SetItemData(newItem, new ResourceItemData("FONT_NEW", ResourceType::TYPE_RESOURCE, data->id));
+
     mItems["FONT_NEW"] = newItem;
     mResourceManifest.AddFont(data->id, "FONT_NEW");
 }
@@ -226,6 +310,14 @@ void ResourceFrame::DeleteItem(wxCommandEvent& event)
     mItems.erase(data->id);
     mResourceTree->Delete(item);
 
+}
+
+void ResourceFrame::RenameItem(wxCommandEvent& event)
+{
+    wxTreeItemId item = mResourceTree->GetSelection();
+    if (item == mResourceTree->GetRootItem())
+        return;
+    mResourceTree->EditLabel(item);
 }
 
 void ResourceFrame::AddGroupImpl(std::string theName)
