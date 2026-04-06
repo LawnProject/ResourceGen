@@ -130,7 +130,7 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
         if (mResourceManifest.mGroupMap.count(aNewName))
         {
             wxLogError("You cannot name 2 groups the same");
-            event.SetLabel(mItemStrEditingNow);
+            event.Veto();
             return;
         }
     }
@@ -139,13 +139,13 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
         if (mResourceManifest.mGroupMap[data->parent].mImageMap.count(aNewName) || mResourceManifest.mGroupMap[data->parent].mSoundMap.count(aNewName) || mResourceManifest.mGroupMap[data->parent].mFontMap.count(aNewName))
         {
             wxLogError("You cannot name 2 resources the same");
-            event.SetLabel(mItemStrEditingNow);
+            event.Veto();
             return;
         }
     }
     else
     {
-        event.SetLabel(mItemStrEditingNow);
+        event.Veto();
         return;
     }
 
