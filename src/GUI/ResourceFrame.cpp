@@ -1,6 +1,7 @@
 #include "ResourceFrame.h"
 #include "ResourceItem.h"
 #include <wx/treectrl.h>
+#include <wx/spinctrl.h>
 #include <wx/splitter.h>
 
 ResourceFrame::ResourceFrame()
@@ -30,20 +31,20 @@ ResourceFrame::ResourceFrame()
     
     wxSplitterWindow* splitter = new wxSplitterWindow(this);
 
-    wxPanel* leftPanel = new wxPanel(splitter);
+    mLeftPanel = new wxPanel(splitter);
 
-    mResourceTree = new wxTreeCtrl(leftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_DEFAULT_STYLE | wxTR_EDIT_LABELS);
-    mResourceTree->Bind(wxEVT_TREE_ITEM_RIGHT_CLICK,
-        &ResourceFrame::OnTreeRightClick, this);
+    mResourceTree = new wxTreeCtrl(mLeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_DEFAULT_STYLE | wxTR_EDIT_LABELS);
+    mResourceTree->Bind(wxEVT_TREE_ITEM_RIGHT_CLICK, &ResourceFrame::OnTreeRightClick, this);
+    mResourceTree->Bind(wxEVT_TREE_SEL_CHANGED, &ResourceFrame::OnTreeClick, this);
 
     wxBoxSizer* leftSizer = new wxBoxSizer(wxVERTICAL);
     leftSizer->Add(mResourceTree, 1, wxEXPAND);
-    leftPanel->SetSizer(leftSizer);
+    mLeftPanel->SetSizer(leftSizer);
 
-    wxPanel* rightPanel = new wxPanel(splitter);
-    rightPanel->SetBackgroundColour(*wxWHITE);
+    mRightPanel = new wxPanel(splitter);
+    mRightPanel->SetBackgroundColour(*wxWHITE);
 
-    splitter->SplitVertically(leftPanel, rightPanel, 250);
+    splitter->SplitVertically(mLeftPanel, mRightPanel, 250);
     splitter->SetMinimumPaneSize(100);
 
     mRoot = mResourceTree->AddRoot("Resource Project");
@@ -90,22 +91,32 @@ void ResourceFrame::OnOpenFile(wxCommandEvent& event)
         return;
 
     mResourceManifest.Import(openFileDialog.GetPath().ToStdString());
+    mResourceTree->DeleteAllItems();
+    mRoot = mResourceTree->AddRoot("Resource Project");
+    mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
+    mResourceTree->ExpandAll();
 
     for (auto group : mResourceManifest.mGroupMap)
     {
         AddGroupImpl(group.first);
-
-        for (auto image : group.second.mImageMap)
+        for (auto res : group.second.mResourceMap)
         {
-            AddImageImpl(image.first, group.first);
-        }
-        for (auto sound : group.second.mSoundMap)
-        {
-            AddSoundImpl(sound.first, group.first);
-        }
-        for (auto font : group.second.mFontMap)
-        {
-            AddFontImpl(font.first, group.first);
+            switch (res.second->mType)
+            {
+            case ResourceSubType::TYPE_IMAGE:
+                AddImageImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_SOUND:
+                AddSoundImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_FONT:
+                AddFontImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_DEFAULT_SETTINGS:
+                AddDefaultSettingsImpl(res.first, group.first);
+                break;
+            }
+            
         }
     }
 }
@@ -125,7 +136,7 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
 
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(hoveredItem);
 
-    if (data->type == ResourceType::TYPE_GROUP)
+    if (data->mType == ResourceType::TYPE_GROUP)
     {
         if (mResourceManifest.mGroupMap.count(aNewName))
         {
@@ -134,9 +145,9 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
             return;
         }
     }
-    else if (data->type == ResourceType::TYPE_RESOURCE)
+    else if (data->mType == ResourceType::TYPE_RESOURCE)
     {
-        if (mResourceManifest.mGroupMap[data->parent].mImageMap.count(aNewName) || mResourceManifest.mGroupMap[data->parent].mSoundMap.count(aNewName) || mResourceManifest.mGroupMap[data->parent].mFontMap.count(aNewName))
+        if (mResourceManifest.GetResource(data->mParent, aNewName) != nullptr)
         {
             wxLogError("You cannot name 2 resources the same");
             event.Veto();
@@ -150,12 +161,12 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
     }
 
 
-    data->id = aNewName;
+    data->mID = aNewName;
 
     mItems[aNewName] = mItems[mItemStrEditingNow];
     mItems.erase(mItemStrEditingNow);
 
-    if (data->type == ResourceType::TYPE_GROUP)
+    if (data->mType == ResourceType::TYPE_GROUP)
     {
         mResourceManifest.mGroupMap[aNewName] = mResourceManifest.mGroupMap[mItemStrEditingNow];
         mResourceManifest.mGroupMap.erase(mItemStrEditingNow);
@@ -164,27 +175,17 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
         while (ch.IsOk()) 
         {
             ResourceItemData* childData = (ResourceItemData*)mResourceTree->GetItemData(ch);
-            childData->parent = aNewName;
+            childData->mParent = aNewName;
             ch = mResourceTree->GetNextSibling(hoveredItem);
         }
     }
-    else if (data->type == ResourceType::TYPE_RESOURCE)
+    else if (data->mType == ResourceType::TYPE_RESOURCE)
     {
-        if (mResourceManifest.mGroupMap[data->parent].mImageMap.count(mItemStrEditingNow))
-        {
-            mResourceManifest.mGroupMap[data->parent].mImageMap[aNewName] = mResourceManifest.mGroupMap[data->parent].mImageMap[mItemStrEditingNow];
-            mResourceManifest.mGroupMap[data->parent].mImageMap.erase(mItemStrEditingNow);
-        }
-        else if (mResourceManifest.mGroupMap[data->parent].mSoundMap.count(mItemStrEditingNow))
-        {
-            mResourceManifest.mGroupMap[data->parent].mSoundMap[aNewName] = mResourceManifest.mGroupMap[data->parent].mSoundMap[mItemStrEditingNow];
-            mResourceManifest.mGroupMap[data->parent].mSoundMap.erase(mItemStrEditingNow);
-        }
-        else if (mResourceManifest.mGroupMap[data->parent].mFontMap.count(mItemStrEditingNow))
-        {
-            mResourceManifest.mGroupMap[data->parent].mFontMap[aNewName] = mResourceManifest.mGroupMap[data->parent].mFontMap[mItemStrEditingNow];
-            mResourceManifest.mGroupMap[data->parent].mFontMap.erase(mItemStrEditingNow);
-        }
+        auto it = std::find_if(mResourceManifest.mGroupMap[data->mParent].mResourceMap.begin(), mResourceManifest.mGroupMap[data->mParent].mResourceMap.end(),
+            [&](const auto& pair) { return pair.first == mItemStrEditingNow; });
+
+        if (it != mResourceManifest.mGroupMap[data->mParent].mResourceMap.end())
+            it->first = aNewName; // just rename cause it's a vector
     }
 }
 
@@ -206,6 +207,135 @@ void ResourceFrame::OnGenerateSourceFile(wxCommandEvent& event)
     wxLogMessage("THIS FEATURE ISN'T IMPLEMENTED YET\n - Electr0Gunner");
 }
 
+
+void ResourceFrame::OnTreeClick(wxTreeEvent& event)
+{
+    mCurrentResource = event.GetItem();
+    mResourceTree->SelectItem(mCurrentResource);
+    ResourceItemData* aResourceData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    mRightPanel->Freeze();
+    mRightPanel->DestroyChildren(); 
+    mRightPanel->SetSizer(nullptr);
+
+    switch (aResourceData->mType)
+    {
+        case ResourceType::TYPE_GROUP:
+        {
+            break;
+        }
+        case ResourceType::TYPE_RESOURCE:
+        {
+            wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+
+            wxScrolledWindow* settingsPanel = new wxScrolledWindow(
+                mRightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
+
+            settingsPanel->SetScrollRate(0, 10);
+
+            wxBoxSizer* settingsSizer = new wxBoxSizer(wxVERTICAL);
+
+            mPathField = new wxTextCtrl(settingsPanel, ID_RESOURCE_PATH_FIELD);
+            mPathField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetResource(aResourceData->mID)->mPath);
+            Bind(wxEVT_TEXT, &ResourceFrame::SetResourcePath, this, ID_RESOURCE_PATH_FIELD);
+            switch (aResourceData->mSubType)
+            {
+            case ResourceSubType::TYPE_IMAGE:
+            {
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Image settings"), 0);
+                wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
+                pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                pathThing->Add(mPathField, 1);
+                settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+                wxSpinCtrl* aStepperCol = new wxSpinCtrl(settingsPanel, ID_RESOURCE_STEP_COL);
+                aStepperCol->SetMin(1);
+                wxBoxSizer* colThing = new wxBoxSizer(wxHORIZONTAL);
+                colThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Columns:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                colThing->Add(aStepperCol, 1);
+                settingsSizer->Add(colThing, 0, wxEXPAND | wxALL, 5);
+                aStepperCol->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mCols);
+
+                wxSpinCtrl* aStepperRow = new wxSpinCtrl(settingsPanel, ID_RESOURCE_STEP_COL);
+                aStepperRow->SetMin(1);
+                wxBoxSizer* rowThing = new wxBoxSizer(wxHORIZONTAL);
+                rowThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Rows:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                rowThing->Add(aStepperRow, 1);
+                settingsSizer->Add(rowThing, 0, wxEXPAND | wxALL, 5);
+                aStepperRow->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mRows);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageRow, this, ID_RESOURCE_STEP_ROW);
+
+                mAlphaField = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_FIELD);
+                wxBoxSizer* alphaThing = new wxBoxSizer(wxHORIZONTAL);
+                alphaThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Mask:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                alphaThing->Add(mAlphaField, 1);
+                settingsSizer->Add(alphaThing, 0, wxEXPAND | wxALL, 5);
+                mAlphaField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaGrid);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaGrid, this, ID_RESOURCE_ALPHA_FIELD);
+                break;
+            }
+            case ResourceSubType::TYPE_DEFAULT_SETTINGS:
+            {
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Default settings"), 0);
+                mIDPrefixField = new wxTextCtrl(settingsPanel, ID_RESOURCE_IDPREFIX_FIELD);
+                wxBoxSizer* prefixThing = new wxBoxSizer(wxHORIZONTAL);
+                prefixThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "ID Prefix:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                prefixThing->Add(mIDPrefixField, 1);
+                wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
+                pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                pathThing->Add(mPathField, 1);
+                settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+                settingsSizer->Add(prefixThing, 0, wxEXPAND | wxALL, 5);
+                mIDPrefixField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetDefaultSettings(aResourceData->mID)->mIDPrefix);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetDefaultSettingsIDPrefix, this, ID_RESOURCE_IDPREFIX_FIELD);
+                break;
+            }
+            case ResourceSubType::TYPE_SOUND:
+            {
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Sound settings"), 0);
+                wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
+                pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                pathThing->Add(mPathField, 1);
+                settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+                break;
+            }
+            case ResourceSubType::TYPE_FONT:
+            {
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Font settings"), 0);
+                wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
+                pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                pathThing->Add(mPathField, 1);
+                settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+                break;
+            }
+            }
+            
+            settingsPanel->SetSizer(settingsSizer);
+            settingsPanel->FitInside();
+
+            if (aResourceData->mSubType != ResourceSubType::TYPE_DEFAULT_SETTINGS)
+            {
+                wxStaticBoxSizer* previewSizer = new wxStaticBoxSizer(wxVERTICAL, mRightPanel, "Preview");
+
+                wxWindow* box = previewSizer->GetStaticBox();
+                wxPanel* previewPanel = new wxPanel(box);
+                previewPanel->SetBackgroundColour(*wxBLACK);
+                previewSizer->Add(previewPanel, 1, wxEXPAND | wxALL, 5);
+                sizer->Add(previewSizer, 1, wxEXPAND | wxALL, 5);
+            }
+
+            sizer->Add(settingsPanel, 2, wxEXPAND | wxALL, 5);
+
+            mRightPanel->SetSizer(sizer);
+            mRightPanel->Layout();
+            break;
+        }
+        case ResourceType::TYPE_ROOT:
+        default:
+            break;
+    }
+
+    mRightPanel->Thaw();
+}
+
 void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
 {
     wxTreeItemId hoveredItem = event.GetItem();
@@ -216,21 +346,26 @@ void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
 
     wxMenu menu;
     
-    if (data->type == ResourceType::TYPE_ROOT)
+    if (data->mType == ResourceType::TYPE_ROOT)
     {
         menu.Append(ID_TREE_ADD_GROUP, "Add Group");
     }
-    else if (data->type == ResourceType::TYPE_GROUP)
+    else if (data->mType == ResourceType::TYPE_GROUP)
     {
         menu.Append(ID_TREE_ADD_IMAGE, "Add Image");
         menu.Append(ID_TREE_ADD_SOUND, "Add Sound");
         menu.Append(ID_TREE_ADD_FONT, "Add Font");
+        menu.Append(ID_TREE_ADD_DEFAULT_SETTINGS, "Add Default Settings");
         menu.AppendSeparator();
         menu.Append(ID_TREE_RENAME_ITEM, "Rename");
         menu.Append(ID_TREE_REMOVE_ITEM, "Delete");
     }
     else
     {
+        mSwappingItems = { data->mParent, data->mID };
+        menu.Append(ID_TREE_MOVE_UP_ITEM, "Move Up");
+        menu.Append(ID_TREE_MOVE_DOWN_ITEM, "Move Down");
+        menu.AppendSeparator();
         menu.Append(ID_TREE_RENAME_ITEM, "Rename");
         menu.Append(ID_TREE_REMOVE_ITEM, "Delete");
     }
@@ -239,8 +374,11 @@ void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
     Bind(wxEVT_MENU, &ResourceFrame::AddImage, this, ID_TREE_ADD_IMAGE);
     Bind(wxEVT_MENU, &ResourceFrame::AddSound, this, ID_TREE_ADD_SOUND);
     Bind(wxEVT_MENU, &ResourceFrame::AddFont, this, ID_TREE_ADD_FONT);
+    Bind(wxEVT_MENU, &ResourceFrame::AddDefaultSettings, this, ID_TREE_ADD_DEFAULT_SETTINGS);
     Bind(wxEVT_MENU, &ResourceFrame::DeleteItem, this, ID_TREE_REMOVE_ITEM);
     Bind(wxEVT_MENU, &ResourceFrame::RenameItem, this, ID_TREE_RENAME_ITEM);
+    Bind(wxEVT_MENU, &ResourceFrame::MoveUpItem, this, ID_TREE_MOVE_UP_ITEM);
+    Bind(wxEVT_MENU, &ResourceFrame::MoveDownItem, this, ID_TREE_MOVE_DOWN_ITEM);
 
     PopupMenu(&menu);
 }
@@ -266,10 +404,10 @@ void ResourceFrame::AddImage(wxCommandEvent& event)
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
 
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "IMAGE_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData("IMAGE_NEW", ResourceType::TYPE_RESOURCE, data->id));
+    mResourceTree->SetItemData(newItem, new ResourceItemData("IMAGE_NEW", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_IMAGE));
 
     mItems["IMAGE_NEW"] = newItem;
-    mResourceManifest.AddFont(data->id, "IMAGE_NEW");
+    mResourceManifest.AddImage(data->mID, "IMAGE_NEW");
 }
 
 void ResourceFrame::AddSound(wxCommandEvent& event)
@@ -280,10 +418,10 @@ void ResourceFrame::AddSound(wxCommandEvent& event)
 
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "SOUND_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData("SOUND_NEW", ResourceType::TYPE_RESOURCE, data->id));
+    mResourceTree->SetItemData(newItem, new ResourceItemData("SOUND_NEW", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_SOUND));
 
     mItems["SOUND_NEW"] = newItem;
-    mResourceManifest.AddSound(data->id, "SOUND_NEW");
+    mResourceManifest.AddSound(data->mID, "SOUND_NEW");
 }
 
 void ResourceFrame::AddFont(wxCommandEvent& event)
@@ -294,10 +432,24 @@ void ResourceFrame::AddFont(wxCommandEvent& event)
 
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "FONT_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData("FONT_NEW", ResourceType::TYPE_RESOURCE, data->id));
+    mResourceTree->SetItemData(newItem, new ResourceItemData("FONT_NEW", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_FONT));
 
     mItems["FONT_NEW"] = newItem;
-    mResourceManifest.AddFont(data->id, "FONT_NEW");
+    mResourceManifest.AddFont(data->mID, "FONT_NEW");
+}
+
+void ResourceFrame::AddDefaultSettings(wxCommandEvent& event)
+{
+    wxTreeItemId root = mResourceTree->GetSelection();
+    if (!root)
+        return;
+
+    ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+    wxTreeItemId newItem = mResourceTree->AppendItem(root, "NEW_SETTINGS");
+    mResourceTree->SetItemData(newItem, new ResourceItemData("NEW_SETTINGS", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_DEFAULT_SETTINGS));
+
+    mItems["NEW_SETTINGS"] = newItem;
+    mResourceManifest.AddDefaultSettings(data->mID, "NEW_SETTINGS");
 }
 
 void ResourceFrame::DeleteItem(wxCommandEvent& event)
@@ -306,10 +458,9 @@ void ResourceFrame::DeleteItem(wxCommandEvent& event)
     if (item == mResourceTree->GetRootItem())
         return;
     ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(item);
-    mResourceManifest.DeleteItem(data->id);
-    mItems.erase(data->id);
+    mResourceManifest.DeleteItem(data->mParent, data->mID);
+    mItems.erase(data->mID);
     mResourceTree->Delete(item);
-
 }
 
 void ResourceFrame::RenameItem(wxCommandEvent& event)
@@ -318,6 +469,174 @@ void ResourceFrame::RenameItem(wxCommandEvent& event)
     if (item == mResourceTree->GetRootItem())
         return;
     mResourceTree->EditLabel(item);
+}
+
+bool HasPrevious(wxTreeCtrl* tree, wxTreeItemId item)
+{
+    wxTreeItemId prev = tree->GetPrevSibling(item);
+    return prev.IsOk();
+}
+
+bool HasNext(wxTreeCtrl* tree, wxTreeItemId item)
+{
+    wxTreeItemId next = tree->GetNextSibling(item);
+    return next.IsOk();
+}
+
+wxTreeItemId FindItemByData(wxTreeCtrl* tree, wxTreeItemId parent, void* data)
+{
+    if (tree->GetItemData(parent) == data)
+        return parent;
+
+    wxTreeItemIdValue cookie;
+    wxTreeItemId child = tree->GetFirstChild(parent, cookie);
+
+    while (child.IsOk())
+    {
+        wxTreeItemId result = FindItemByData(tree, child, data);
+        if (result.IsOk())
+            return result;
+
+        child = tree->GetNextChild(parent, cookie);
+    }
+
+    return wxTreeItemId();
+}
+
+void ResourceFrame::MoveUpItem(wxCommandEvent& event)
+{
+    wxTreeItemId selected = mResourceTree->GetSelection();
+
+    if (!HasPrevious(mResourceTree, selected))
+    {
+        wxLogMessage("Already at top of group");
+        return;
+    }
+    auto it = std::find_if(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin(), mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.end(),
+        [&](const auto& p) { return p.first == mSwappingItems.second; });
+
+    size_t index = SIZE_MAX;
+    if (it != mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.end())
+    {
+        index = std::distance(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin(), it);
+    }
+    if (index == SIZE_MAX)
+        return;
+    swap(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index], mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin()[index - 1]);
+    mResourceTree->DeleteAllItems();
+    mRoot = mResourceTree->AddRoot("Resource Project");
+    mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
+
+    for (auto group : mResourceManifest.mGroupMap)
+    {
+        AddGroupImpl(group.first);
+        for (auto res : group.second.mResourceMap)
+        {
+            switch (res.second->mType)
+            {
+            case ResourceSubType::TYPE_IMAGE:
+                AddImageImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_SOUND:
+                AddSoundImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_FONT:
+                AddFontImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_DEFAULT_SETTINGS:
+                AddDefaultSettingsImpl(res.first, group.first);
+                break;
+            }
+
+        }
+    }    
+}
+
+void ResourceFrame::MoveDownItem(wxCommandEvent& event)
+{
+    wxTreeItemId selected = mResourceTree->GetSelection();
+
+    if (!HasNext(mResourceTree, selected))
+    {
+        wxLogMessage("Already at bottom of group");
+        return;
+    }
+    auto it = std::find_if(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin(), mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.end(),
+        [&](const auto& p) { return p.first == mSwappingItems.second; });
+
+    size_t index = SIZE_MAX;
+    if (it != mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.end())
+    {
+        index = std::distance(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin(), it);
+    }
+    if (index == SIZE_MAX)
+        return;
+
+    swap(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index], mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index + 1]);
+    mResourceTree->DeleteAllItems();
+    mRoot = mResourceTree->AddRoot("Resource Project");
+    mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
+    mResourceTree->ExpandAll();
+
+    for (auto group : mResourceManifest.mGroupMap)
+    {
+        AddGroupImpl(group.first);
+        for (auto res : group.second.mResourceMap)
+        {
+            switch (res.second->mType)
+            {
+            case ResourceSubType::TYPE_IMAGE:
+                AddImageImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_SOUND:
+                AddSoundImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_FONT:
+                AddFontImpl(res.first, group.first);
+                break;
+            case ResourceSubType::TYPE_DEFAULT_SETTINGS:
+                AddDefaultSettingsImpl(res.first, group.first);
+                break;
+            }
+
+        }
+    }
+}
+
+void ResourceFrame::SetResourcePath(wxCommandEvent& event)
+{
+    ResourceItemData* aResourceData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aResource = mResourceManifest.mGroupMap[aResourceData->mParent].GetResource(aResourceData->mID);
+    aResource->mPath = mPathField->GetValue();
+}
+
+void ResourceFrame::SetImageColumns(wxSpinEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mCols = event.GetValue();
+}
+
+void ResourceFrame::SetImageRow(wxSpinEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mRows = event.GetValue();
+}
+
+void ResourceFrame::SetImageAlphaGrid(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mAlphaGrid = mAlphaField->GetValue();
+    anImage->mHasAlphaMask = !anImage->mAlphaGrid.empty();
+}
+
+void ResourceFrame::SetDefaultSettingsIDPrefix(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetDefaultSettings(anImageData->mID);
+    anImage->mIDPrefix = mIDPrefixField->GetValue();
 }
 
 void ResourceFrame::AddGroupImpl(std::string theName)
@@ -331,7 +650,7 @@ void ResourceFrame::AddImageImpl(std::string theName, std::string theGroup)
 {
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
-    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE));
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_IMAGE));
     mItems[theName] = newItem;
 }
 
@@ -339,7 +658,7 @@ void ResourceFrame::AddSoundImpl(std::string theName, std::string theGroup)
 {
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
-    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE));
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_SOUND));
     mItems[theName] = newItem;
 }
 
@@ -347,6 +666,14 @@ void ResourceFrame::AddFontImpl(std::string theName, std::string theGroup)
 {
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
-    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE));
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_FONT));
+    mItems[theName] = newItem;
+}
+
+void ResourceFrame::AddDefaultSettingsImpl(std::string theName, std::string theGroup)
+{
+    wxTreeItemId aGroupItem = mItems[theGroup];
+    wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_DEFAULT_SETTINGS));
     mItems[theName] = newItem;
 }

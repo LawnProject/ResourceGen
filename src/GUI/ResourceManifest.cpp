@@ -20,61 +20,47 @@ void ResourceManifest::AddGroup(std::string theName)
 std::shared_ptr<ResourceImage> ResourceManifest::AddImage(std::string theGroup, std::string theName)
 {
 	auto anImage = std::make_shared<ResourceImage>();
+	anImage->mType = ResourceSubType::TYPE_IMAGE;
 	anImage->mID = theName;
-	mGroupMap[theGroup].mImageMap[theName] = anImage;
+	mGroupMap[theGroup].mResourceMap.push_back({ theName, anImage });
 	return anImage;
 
 }
 std::shared_ptr<ResourceSound> ResourceManifest::AddSound(std::string theGroup, std::string theName)
 {
 	auto aSound = std::make_shared<ResourceSound>();
+	aSound->mType = ResourceSubType::TYPE_SOUND;
 	aSound->mID = theName;
-	mGroupMap[theGroup].mSoundMap[theName] = aSound;
+	mGroupMap[theGroup].mResourceMap.push_back({ theName, aSound });
 	return aSound;
 }
 
 std::shared_ptr<ResourceFont> ResourceManifest::AddFont(std::string theGroup, std::string theName)
 {
 	auto aFont = std::make_shared<ResourceFont>();
+	aFont->mType = ResourceSubType::TYPE_FONT;
 	aFont->mID = theName;
-	mGroupMap[theGroup].mFontMap[theName] = aFont;
+	mGroupMap[theGroup].mResourceMap.push_back({ theName, aFont });
 	return aFont;
 }
 
-void ResourceManifest::DeleteItem(std::string theName)
+std::shared_ptr<DefaultSettings> ResourceManifest::AddDefaultSettings(std::string theGroup, std::string theName)
 {
-	for (auto group : mGroupMap)
-	{
-		for (auto el : group.second.mImageMap)
-		{
-			if (el.first == theName)
-			{
-				group.second.mImageMap.erase(theName);
-				break;
-			}
-		}
-		for (auto el : group.second.mSoundMap)
-		{
-			if (el.first == theName)
-			{
-				group.second.mSoundMap.erase(theName);
-				break;
-			}
-		}
-		for (auto el : group.second.mFontMap)
-		{
-			if (el.first == theName)
-			{
-				group.second.mFontMap.erase(theName);
-				break;
-			}
-		}
-	}
+	auto aSettings = std::make_shared<DefaultSettings>();
+	aSettings->mType = ResourceSubType::TYPE_DEFAULT_SETTINGS;
+	aSettings->mID = theName;
+	mGroupMap[theGroup].mResourceMap.push_back({ theName, aSettings });
+	return aSettings;
+}
+
+void ResourceManifest::DeleteItem(std::string theGroup, std::string theName)
+{
+	RemoveResource(theGroup, theName);
 }
 
 void ResourceManifest::Export(std::string theXMLPath)
 {
-	XMLDocument aDocument;
+	tinyxml2::XMLDocument aDocument; //why is this ambiguous???
 
 	XMLElement* aRoot = aDocument.NewElement("ResourceManifest");
 	aDocument.InsertFirstChild(aRoot);
@@ -85,26 +71,54 @@ void ResourceManifest::Export(std::string theXMLPath)
 		aGroup->SetAttribute("id", group.first.c_str());
 		aRoot->InsertFirstChild(aGroup);
 		
-		for (auto image : group.second.mImageMap)
+		for (auto pair : group.second.mResourceMap)
 		{
-			XMLElement* anImage = aGroup->InsertNewChildElement("Image");
-			anImage->SetAttribute("id", image.first.c_str());
-			anImage->SetAttribute("path", image.second->mPath.c_str());
+			auto element = pair.second;
+			switch (element->mType)
+			{
+				case ResourceSubType::TYPE_IMAGE:
+				{
+					std::shared_ptr<ResourceImage> image = std::static_pointer_cast<ResourceImage>(element);
+					XMLElement* anImage = aGroup->InsertNewChildElement("Image");
+					anImage->SetAttribute("id", element->mID.c_str());
+					anImage->SetAttribute("path", element->mPath.c_str());
 
-			if (image.second->mHasAlphaMask)
-				anImage->SetAttribute("alphagrid", image.second->mAlphaGrid.c_str());
-		}
-		for (auto sound : group.second.mSoundMap)
-		{
-			XMLElement* anImage = aGroup->InsertNewChildElement("Sound");
-			anImage->SetAttribute("id", sound.first.c_str());
-			anImage->SetAttribute("path", sound.second->mPath.c_str());
-		}
-		for (auto font : group.second.mFontMap)
-		{
-			XMLElement* anImage = aGroup->InsertNewChildElement("Font");
-			anImage->SetAttribute("id", font.first.c_str());
-			anImage->SetAttribute("path", font.second->mPath.c_str());
+					if (image->mHasAlphaMask)
+						anImage->SetAttribute("alphagrid", image->mAlphaGrid.c_str());
+
+					if (image->mCols > 1)
+						anImage->SetAttribute("cols", image->mCols);
+
+					if (image->mRows > 1)
+						anImage->SetAttribute("rows", image->mRows);
+					break;
+				}
+				case ResourceSubType::TYPE_SOUND:
+				{
+					std::shared_ptr<ResourceSound> image = std::static_pointer_cast<ResourceSound>(element);
+					XMLElement* anImage = aGroup->InsertNewChildElement("Sound");
+					anImage->SetAttribute("id", element->mID.c_str());
+					anImage->SetAttribute("path", element->mPath.c_str());
+					break;
+				}
+				case ResourceSubType::TYPE_FONT:
+				{
+					std::shared_ptr<ResourceFont> image = std::static_pointer_cast<ResourceFont>(element);
+					XMLElement* anImage = aGroup->InsertNewChildElement("Sound");
+					anImage->SetAttribute("id", element->mID.c_str());
+					anImage->SetAttribute("path", element->mPath.c_str());
+					break;
+				}
+				case ResourceSubType::TYPE_DEFAULT_SETTINGS:
+				{
+					std::shared_ptr<DefaultSettings> settings = std::static_pointer_cast<DefaultSettings>(element);
+					XMLElement* anImage = aGroup->InsertNewChildElement("SetDefaults");
+					anImage->SetAttribute("idprefix", settings->mIDPrefix.c_str());
+					anImage->SetAttribute("path", element->mPath.c_str());
+					break;
+				}
+			}
+
 		}
 	}
 
@@ -114,7 +128,8 @@ void ResourceManifest::Export(std::string theXMLPath)
 
 void ResourceManifest::Import(std::string theXMLPath)
 {
-	XMLDocument aDocument;
+	mGroupMap.clear();
+	tinyxml2::XMLDocument aDocument;
 	aDocument.LoadFile(theXMLPath.c_str());
 	XMLElement* aManifestRoot = aDocument.FirstChildElement();
 	const char* aName = aManifestRoot->Name();
@@ -128,26 +143,70 @@ void ResourceManifest::Import(std::string theXMLPath)
 	{
 		std::string resourceGroup = e->Attribute("id");
 		AddGroup(resourceGroup);
-		for (XMLElement* image = e->FirstChildElement("Image"); image != nullptr; image = image->NextSiblingElement("Image"))
+		for (XMLElement* child = e->FirstChildElement(); child != nullptr; child = child->NextSiblingElement())
 		{
-			std::string imageID = image->Attribute("id");
-			auto res = AddImage(resourceGroup, imageID);
-			res->mPath = image->Attribute("path");
-			res->mHasAlphaMask = image->Attribute("alphagrid") != 0;
-			if (res->mHasAlphaMask)
-				res->mAlphaGrid = image->Attribute("alphagrid");
-		}
-		for (XMLElement* sound = e->FirstChildElement("Sound"); sound != nullptr; sound = sound->NextSiblingElement("Sound"))
-		{
-			std::string soundID = sound->Attribute("id");
-			auto res = AddSound(resourceGroup, soundID);
-			res->mPath = sound->Attribute("path");
-		}
-		for (XMLElement* font = e->FirstChildElement("Font"); font != nullptr; font = font->NextSiblingElement("Font"))
-		{
-			std::string fontID = font->Attribute("id");
-			auto res = AddFont(resourceGroup, fontID);
-			res->mPath = font->Attribute("path");
+			std::string aName = child->Name();
+			std::string resID = child->Attribute("id") == 0 ? "ERR_NO_ID" : child->Attribute("id");
+			std::string resPath = child->Attribute("path");
+
+			if (aName == "SetDefaults")
+			{
+				int currentSettingID = 0;
+				std::string possibleID = wxString::Format("SETTINGS_%d", currentSettingID).ToStdString();
+				while (GetResource(resourceGroup, possibleID) != nullptr)
+				{
+					currentSettingID++;
+					possibleID = wxString::Format("SETTINGS_%d", currentSettingID).ToStdString();
+				}
+				auto res = AddDefaultSettings(resourceGroup, possibleID);
+				res->mPath = resPath;
+				res->mIDPrefix = child->Attribute("idprefix");
+			}
+			else if (aName == "Image")
+			{
+				auto res = AddImage(resourceGroup, resID);
+				res->mPath = resPath;
+				res->mHasAlphaMask = child->Attribute("alphagrid") != 0;
+				if (res->mHasAlphaMask)
+					res->mAlphaGrid = child->Attribute("alphagrid");
+
+				if (child->Attribute("cols") != 0)
+					res->mCols = atoi(child->Attribute("cols"));
+
+				if (child->Attribute("rows") != 0)
+					res->mRows = atoi(child->Attribute("rows"));
+			}
+			else if (aName == "Sound")
+			{
+				auto res = AddSound(resourceGroup, resID);
+				res->mPath = resPath;
+			}
+			else if (aName == "Font")
+			{
+				auto res = AddFont(resourceGroup, resID);
+				res->mPath = resPath;
+			}
 		}
 	}
+}
+
+std::shared_ptr<BaseResource> ResourceManifest::GetResource(std::string theGroup, std::string theName)
+{
+	auto& map = mGroupMap[theGroup].mResourceMap;
+	auto it = std::find_if(map.begin(), map.end(),
+		[&](const auto& pair) { return pair.first == theName; });
+
+	if (it != map.end())
+		return it->second;
+
+	return nullptr;
+}
+
+void ResourceManifest::RemoveResource(std::string theGroup, std::string theName)
+{
+	auto it = std::find_if(mGroupMap[theGroup].mResourceMap.begin(), mGroupMap[theGroup].mResourceMap.end(),
+		[&](const auto& pair) { return pair.first == theName; });
+
+	if (it != mGroupMap[theGroup].mResourceMap.end())
+		mGroupMap[theGroup].mResourceMap.erase(it);
 }
