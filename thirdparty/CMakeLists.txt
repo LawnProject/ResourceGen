@@ -14,4 +14,11 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets
     GIT_TAG        v3.3.2
 )
-FetchContent_MakeAvailable(SDL3 wxWidgets)
+
+FetchContent_Declare(
+    tinyxml2 
+    GIT_REPOSITORY https://github.com/leethomason/tinyxml2
+    GIT_TAG        11.0.0
+)
+
+FetchContent_MakeAvailable(SDL3 wxWidgets tinyxml2)

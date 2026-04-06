@@ -13,9 +13,10 @@ class ResourceItemData : public wxTreeItemData
 
 
 public:
-	ResourceItemData(ResourceType type): type(type) {}
+	ResourceItemData(std::string id, ResourceType type): id(id), type(type) {}
 	~ResourceItemData() {}
 
+	std::string id;
 	ResourceType type;
 
 private:

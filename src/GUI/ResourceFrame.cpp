@@ -12,6 +12,11 @@ ResourceFrame::ResourceFrame()
     menuFile->Append(ID_FILE_OPEN, "&Open...",
         "Open an existing resource project");
     menuFile->AppendSeparator();
+    menuFile->Append(ID_FILE_SAVE, "&Save...",
+        "Save the resource project to disk");
+    menuFile->Append(ID_FILE_GENERATE_SRC, "&Generate Source...",
+        "Generate the source files to be used in the engine");
+    menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
 
     wxMenu* menuHelp = new wxMenu;
@@ -41,14 +46,16 @@ ResourceFrame::ResourceFrame()
     splitter->SplitVertically(leftPanel, rightPanel, 250);
     splitter->SetMinimumPaneSize(100);
 
-    wxTreeItemId root = mResourceTree->AddRoot("Resource Project");
-    mResourceTree->SetItemData(root, new ResourceItemData(ResourceType::TYPE_ROOT));
+    mRoot = mResourceTree->AddRoot("Resource Project");
+    mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
     mResourceTree->ExpandAll();
 
     CreateStatusBar();
     SetStatusText("Welcome to ResourceGen");
     Bind(wxEVT_MENU, &ResourceFrame::OnNewFile, this, ID_FILE_NEW);
     Bind(wxEVT_MENU, &ResourceFrame::OnOpenFile, this, ID_FILE_OPEN);
+    Bind(wxEVT_MENU, &ResourceFrame::OnSaveFile, this, ID_FILE_SAVE);
+    Bind(wxEVT_MENU, &ResourceFrame::OnGenerateSourceFile, this, ID_FILE_GENERATE_SRC);
     Bind(wxEVT_MENU, &ResourceFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &ResourceFrame::OnExit, this, wxID_EXIT);
 }
@@ -76,6 +83,47 @@ void ResourceFrame::OnNewFile(wxCommandEvent& event)
 
 void ResourceFrame::OnOpenFile(wxCommandEvent& event)
 {
+    wxFileDialog openFileDialog(this, _("Open Resource file"), "", "", "XML files (*.xml)|*.xml", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (openFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    mResourceManifest.Import(openFileDialog.GetPath().ToStdString());
+
+    for (auto group : mResourceManifest.mGroupMap)
+    {
+        AddGroupImpl(group.first);
+
+        for (auto image : group.second.mImageMap)
+        {
+            AddImageImpl(image.first, group.first);
+        }
+        for (auto sound : group.second.mSoundMap)
+        {
+            AddSoundImpl(sound.first, group.first);
+        }
+        for (auto font : group.second.mFontMap)
+        {
+            AddFontImpl(font.first, group.first);
+        }
+    }
+
+}
+
+void ResourceFrame::OnSaveFile(wxCommandEvent& event)
+{
+    wxFileDialog saveFileDialog(this, _("Resource file"), "", "", "XML files (*.xml)|*.xml", wxFD_SAVE);
+    if (saveFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    mResourceManifest.Export(saveFileDialog.GetPath().ToStdString());
+}
+
+void ResourceFrame::OnGenerateSourceFile(wxCommandEvent& event)
+{
+    wxFileDialog saveFileDialog(this, _("Source files"), "", "", "", wxFD_SAVE);
+    if (saveFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
     wxLogMessage("THIS FEATURE ISN'T IMPLEMENTED YET\n - Electr0Gunner");
 }
 
@@ -97,6 +145,7 @@ void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
     {
         menu.Append(ID_TREE_ADD_IMAGE, "Add Image");
         menu.Append(ID_TREE_ADD_SOUND, "Add Sound");
+        menu.Append(ID_TREE_ADD_FONT, "Add Font");
         menu.AppendSeparator();
         menu.Append(ID_TREE_REMOVE_ITEM, "Delete");
     }
@@ -108,6 +157,7 @@ void ResourceFrame::OnTreeRightClick(wxTreeEvent& event)
     Bind(wxEVT_MENU, &ResourceFrame::AddGroup, this, ID_TREE_ADD_GROUP);
     Bind(wxEVT_MENU, &ResourceFrame::AddImage, this, ID_TREE_ADD_IMAGE);
     Bind(wxEVT_MENU, &ResourceFrame::AddSound, this, ID_TREE_ADD_SOUND);
+    Bind(wxEVT_MENU, &ResourceFrame::AddFont, this, ID_TREE_ADD_FONT);
     Bind(wxEVT_MENU, &ResourceFrame::DeleteItem, this, ID_TREE_REMOVE_ITEM);
 
     PopupMenu(&menu);
@@ -120,8 +170,11 @@ void ResourceFrame::AddGroup(wxCommandEvent& event)
         return;
 
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "GROUP_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData(ResourceType::TYPE_GROUP));
+    mResourceTree->SetItemData(newItem, new ResourceItemData("GROUP_NEW", ResourceType::TYPE_GROUP));
+    mItems["GROUP_NEW"] = newItem;
+    mResourceManifest.AddGroup("GROUP_NEW");
 }
+
 void ResourceFrame::AddImage(wxCommandEvent& event)
 {
     wxTreeItemId root = mResourceTree->GetSelection();
@@ -129,7 +182,11 @@ void ResourceFrame::AddImage(wxCommandEvent& event)
         return;
 
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "IMAGE_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData(ResourceType::TYPE_RESOURCE));
+    mResourceTree->SetItemData(newItem, new ResourceItemData("IMAGE_NEW", ResourceType::TYPE_RESOURCE));
+
+    ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+    mItems["IMAGE_NEW"] = newItem;
+    mResourceManifest.AddFont(data->id, "IMAGE_NEW");
 }
 
 void ResourceFrame::AddSound(wxCommandEvent& event)
@@ -139,14 +196,65 @@ void ResourceFrame::AddSound(wxCommandEvent& event)
         return;
 
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "SOUND_NEW");
-    mResourceTree->SetItemData(newItem, new ResourceItemData(ResourceType::TYPE_RESOURCE));
+    mResourceTree->SetItemData(newItem, new ResourceItemData("SOUND_NEW", ResourceType::TYPE_RESOURCE));
+    ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+    mItems["SOUND_NEW"] = newItem;
+    mResourceManifest.AddSound(data->id, "SOUND_NEW");
+}
+
+void ResourceFrame::AddFont(wxCommandEvent& event)
+{
+    wxTreeItemId root = mResourceTree->GetSelection();
+    if (!root)
+        return;
+
+    wxTreeItemId newItem = mResourceTree->AppendItem(root, "FONT_NEW");
+    mResourceTree->SetItemData(newItem, new ResourceItemData("FONT_NEW", ResourceType::TYPE_RESOURCE));
+
+    ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(root);
+    mItems["FONT_NEW"] = newItem;
+    mResourceManifest.AddFont(data->id, "FONT_NEW");
 }
 
 void ResourceFrame::DeleteItem(wxCommandEvent& event)
 {
-    wxTreeItemId root = mResourceTree->GetSelection();
-    if (root == mResourceTree->GetRootItem())
+    wxTreeItemId item = mResourceTree->GetSelection();
+    if (item == mResourceTree->GetRootItem())
         return;
+    ResourceItemData* data = (ResourceItemData*)mResourceTree->GetItemData(item);
+    mResourceManifest.DeleteItem(data->id);
+    mItems.erase(data->id);
+    mResourceTree->Delete(item);
 
-    mResourceTree->Delete(root);
+}
+
+void ResourceFrame::AddGroupImpl(std::string theName)
+{
+    wxTreeItemId newItem = mResourceTree->AppendItem(mRoot, theName.c_str());
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_GROUP));
+    mItems[theName] = newItem;
+}
+
+void ResourceFrame::AddImageImpl(std::string theName, std::string theGroup)
+{
+    wxTreeItemId aGroupItem = mItems[theGroup];
+    wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE));
+    mItems[theName] = newItem;
+}
+
+void ResourceFrame::AddSoundImpl(std::string theName, std::string theGroup)
+{
+    wxTreeItemId aGroupItem = mItems[theGroup];
+    wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE));
+    mItems[theName] = newItem;
+}
+
+void ResourceFrame::AddFontImpl(std::string theName, std::string theGroup)
+{
+    wxTreeItemId aGroupItem = mItems[theGroup];
+    wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
+    mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE));
+    mItems[theName] = newItem;
 }
