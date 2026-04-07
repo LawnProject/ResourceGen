@@ -50,6 +50,7 @@ public:
 	wxTreeCtrl* mResourceTree;
 	ResourceManifest mResourceManifest;
 	std::string mItemStrEditingNow;
+	std::string mAssetRoot;
 	std::pair<std::string, std::string> mSwappingItems;
 
 private:

@@ -81,7 +81,11 @@ void ResourceFrame::OnAbout(wxCommandEvent& event)
 
 void ResourceFrame::OnNewFile(wxCommandEvent& event)
 {
-    wxLogMessage("THIS FEATURE ISN'T IMPLEMENTED YET\n - Electr0Gunner");
+    mResourceManifest.mGroupMap.clear();
+    mResourceTree->DeleteAllItems();
+    mRoot = mResourceTree->AddRoot("Resource Project");
+    mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
+    mResourceTree->ExpandAll();
 }
 
 void ResourceFrame::OnOpenFile(wxCommandEvent& event)
@@ -176,7 +180,7 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
         {
             ResourceItemData* childData = (ResourceItemData*)mResourceTree->GetItemData(ch);
             childData->mParent = aNewName;
-            ch = mResourceTree->GetNextSibling(hoveredItem);
+            ch = mResourceTree->GetNextSibling(ch);
         }
     }
     else if (data->mType == ResourceType::TYPE_RESOURCE)
@@ -483,17 +487,22 @@ bool HasNext(wxTreeCtrl* tree, wxTreeItemId item)
     return next.IsOk();
 }
 
-wxTreeItemId FindItemByData(wxTreeCtrl* tree, wxTreeItemId parent, void* data)
+wxTreeItemId FindItemByID(wxTreeCtrl* tree, wxTreeItemId parent, std::string id)
 {
-    if (tree->GetItemData(parent) == data)
-        return parent;
+    ResourceItemData* data = (ResourceItemData*)tree->GetItemData(parent);
+    if (data)
+    {
+        std::string key = data->mParent + "/" + data->mID;
+        if (key == id)
+            return parent;
+    }
 
     wxTreeItemIdValue cookie;
     wxTreeItemId child = tree->GetFirstChild(parent, cookie);
 
     while (child.IsOk())
     {
-        wxTreeItemId result = FindItemByData(tree, child, data);
+        wxTreeItemId result = FindItemByID(tree, child, id);
         if (result.IsOk())
             return result;
 
@@ -501,6 +510,27 @@ wxTreeItemId FindItemByData(wxTreeCtrl* tree, wxTreeItemId parent, void* data)
     }
 
     return wxTreeItemId();
+}
+
+void CollectExpandedItems(wxTreeCtrl* tree, wxTreeItemId root, std::vector<std::string>& out)
+{
+    if (!root.IsOk())
+        return;
+    if (tree->IsExpanded(root))
+    {
+        ResourceItemData* data = (ResourceItemData*)tree->GetItemData(root);
+        if (data)
+            out.push_back(data->mParent + "/" + data->mID);
+    }
+
+    wxTreeItemIdValue cookie;
+    wxTreeItemId child = tree->GetFirstChild(root, cookie);
+
+    while (child.IsOk())
+    {
+        CollectExpandedItems(tree, child, out);
+        child = tree->GetNextChild(root, cookie);
+    }
 }
 
 void ResourceFrame::MoveUpItem(wxCommandEvent& event)
@@ -523,6 +553,9 @@ void ResourceFrame::MoveUpItem(wxCommandEvent& event)
     if (index == SIZE_MAX)
         return;
     swap(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index], mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin()[index - 1]);
+    std::vector<std::string> aExpandedData;
+    CollectExpandedItems(mResourceTree, mRoot, aExpandedData);
+    mResourceTree->Freeze();
     mResourceTree->DeleteAllItems();
     mRoot = mResourceTree->AddRoot("Resource Project");
     mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
@@ -549,7 +582,13 @@ void ResourceFrame::MoveUpItem(wxCommandEvent& event)
             }
 
         }
-    }    
+    }
+    for (auto data : aExpandedData)
+    {
+        wxTreeItemId aItem = FindItemByID(mResourceTree, mRoot, data);
+        mResourceTree->Expand(aItem);
+    }
+    mResourceTree->Thaw();
 }
 
 void ResourceFrame::MoveDownItem(wxCommandEvent& event)
@@ -573,6 +612,10 @@ void ResourceFrame::MoveDownItem(wxCommandEvent& event)
         return;
 
     swap(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index], mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index + 1]);
+    std::vector<std::string> aExpandedData;
+    CollectExpandedItems(mResourceTree, mRoot, aExpandedData);
+    mResourceTree->Freeze();
+
     mResourceTree->DeleteAllItems();
     mRoot = mResourceTree->AddRoot("Resource Project");
     mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
@@ -601,6 +644,12 @@ void ResourceFrame::MoveDownItem(wxCommandEvent& event)
 
         }
     }
+    for (auto data : aExpandedData)
+    {
+        wxTreeItemId aItem = FindItemByID(mResourceTree, mRoot, data);
+        mResourceTree->Expand(aItem);
+    }
+    mResourceTree->Thaw();
 }
 
 void ResourceFrame::SetResourcePath(wxCommandEvent& event)
