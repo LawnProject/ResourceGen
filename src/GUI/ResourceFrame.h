@@ -12,6 +12,7 @@ class ResourceFrame : public wxFrame
 		ID_FILE_OPEN,
 		ID_FILE_SAVE,
 		ID_FILE_GENERATE_SRC,
+		ID_FILE_SET_ASSET_ROOT,
 		ID_TREE_ADD_GROUP = 1001,
 		ID_TREE_ADD_IMAGE,
 		ID_TREE_ADD_SOUND,
@@ -60,6 +61,7 @@ private:
 	void OnOpenFile(wxCommandEvent& event);
 	void OnSaveFile(wxCommandEvent& event);
 	void OnGenerateSourceFile(wxCommandEvent& event);
+	void OnSetAssetRoot(wxCommandEvent& event);
 	void OnExit(wxCommandEvent& event);
 	void OnAbout(wxCommandEvent& event);
 	void OnTreeClick(wxTreeEvent& event);

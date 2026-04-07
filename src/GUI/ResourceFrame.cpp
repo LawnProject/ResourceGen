@@ -3,10 +3,73 @@
 #include <wx/treectrl.h>
 #include <wx/spinctrl.h>
 #include <wx/splitter.h>
+#include <filesystem>
+
+
+bool HasPrevious(wxTreeCtrl* tree, wxTreeItemId item)
+{
+    wxTreeItemId prev = tree->GetPrevSibling(item);
+    return prev.IsOk();
+}
+
+bool HasNext(wxTreeCtrl* tree, wxTreeItemId item)
+{
+    wxTreeItemId next = tree->GetNextSibling(item);
+    return next.IsOk();
+}
+
+wxTreeItemId FindItemByID(wxTreeCtrl* tree, wxTreeItemId parent, std::string id)
+{
+    ResourceItemData* data = (ResourceItemData*)tree->GetItemData(parent);
+    if (data)
+    {
+        std::string key = data->mParent + "/" + data->mID;
+        if (key == id)
+            return parent;
+    }
+
+    wxTreeItemIdValue cookie;
+    wxTreeItemId child = tree->GetFirstChild(parent, cookie);
+
+    while (child.IsOk())
+    {
+        wxTreeItemId result = FindItemByID(tree, child, id);
+        if (result.IsOk())
+            return result;
+
+        child = tree->GetNextChild(parent, cookie);
+    }
+
+    return wxTreeItemId();
+}
+
+void CollectExpandedItems(wxTreeCtrl* tree, wxTreeItemId root, std::vector<std::string>& out)
+{
+    if (!root.IsOk())
+        return;
+    if (tree->IsExpanded(root))
+    {
+        ResourceItemData* data = (ResourceItemData*)tree->GetItemData(root);
+        if (data)
+            out.push_back(data->mParent + "/" + data->mID);
+    }
+
+    wxTreeItemIdValue cookie;
+    wxTreeItemId child = tree->GetFirstChild(root, cookie);
+
+    while (child.IsOk())
+    {
+        CollectExpandedItems(tree, child, out);
+        child = tree->GetNextChild(root, cookie);
+    }
+}
+
 
 ResourceFrame::ResourceFrame()
     : wxFrame(NULL, wxID_ANY, "ResourceGen - LawnProject", wxDefaultPosition, wxSize(800, 500))
 {
+    wxInitAllImageHandlers();
+
     wxMenu* menuFile = new wxMenu;
     menuFile->Append(ID_FILE_NEW, "&New...",
         "Create a new resource project");
@@ -17,6 +80,9 @@ ResourceFrame::ResourceFrame()
         "Save the resource project to disk");
     menuFile->Append(ID_FILE_GENERATE_SRC, "&Generate Source...",
         "Generate the source files to be used in the engine");
+    menuFile->AppendSeparator();
+    menuFile->Append(ID_FILE_SET_ASSET_ROOT, "&Set Asset Root...",
+        "Set the asset root from where you can preview resources from");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
 
@@ -57,6 +123,7 @@ ResourceFrame::ResourceFrame()
     Bind(wxEVT_MENU, &ResourceFrame::OnOpenFile, this, ID_FILE_OPEN);
     Bind(wxEVT_MENU, &ResourceFrame::OnSaveFile, this, ID_FILE_SAVE);
     Bind(wxEVT_MENU, &ResourceFrame::OnGenerateSourceFile, this, ID_FILE_GENERATE_SRC);
+    Bind(wxEVT_MENU, &ResourceFrame::OnSetAssetRoot, this, ID_FILE_SET_ASSET_ROOT);
     Bind(wxEVT_MENU, &ResourceFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &ResourceFrame::OnExit, this, wxID_EXIT);
     Bind(wxEVT_TREE_BEGIN_LABEL_EDIT, &ResourceFrame::OnItemRenameStart, this);
@@ -211,6 +278,14 @@ void ResourceFrame::OnGenerateSourceFile(wxCommandEvent& event)
     wxLogMessage("THIS FEATURE ISN'T IMPLEMENTED YET\n - Electr0Gunner");
 }
 
+void ResourceFrame::OnSetAssetRoot(wxCommandEvent& event)
+{
+    wxDirDialog folderDialog(this, _("Asset Root"), "", wxDD_DIR_MUST_EXIST);
+    if (folderDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    mAssetRoot = folderDialog.GetPath().ToStdString();
+}
 
 void ResourceFrame::OnTreeClick(wxTreeEvent& event)
 {
@@ -315,15 +390,109 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
             settingsPanel->SetSizer(settingsSizer);
             settingsPanel->FitInside();
 
-            if (aResourceData->mSubType != ResourceSubType::TYPE_DEFAULT_SETTINGS)
+            if (aResourceData->mSubType != ResourceSubType::TYPE_DEFAULT_SETTINGS) //This means we can have a preview of the content
             {
-                wxStaticBoxSizer* previewSizer = new wxStaticBoxSizer(wxVERTICAL, mRightPanel, "Preview");
 
-                wxWindow* box = previewSizer->GetStaticBox();
-                wxPanel* previewPanel = new wxPanel(box);
-                previewPanel->SetBackgroundColour(*wxBLACK);
-                previewSizer->Add(previewPanel, 1, wxEXPAND | wxALL, 5);
-                sizer->Add(previewSizer, 1, wxEXPAND | wxALL, 5);
+                std::shared_ptr<DefaultSettings> aLastDefaultSettings;
+                wxTreeItemId aParentGroup = mResourceTree->GetItemParent(mCurrentResource);
+                wxTreeItemIdValue cookie;
+                wxTreeItemId aResource = mResourceTree->GetFirstChild(aParentGroup, cookie);
+
+                while (HasNext(mResourceTree, aResource))
+                {
+                    if (aResource.IsOk())
+                    {
+                        ResourceItemData* aResData = (ResourceItemData*)mResourceTree->GetItemData(aResource);
+                        if (aResData->mSubType == ResourceSubType::TYPE_DEFAULT_SETTINGS)
+                        {
+                            aLastDefaultSettings = mResourceManifest.mGroupMap[aResourceData->mParent].GetDefaultSettings(aResData->mID);
+                        }
+                    }
+                    aResource = mResourceTree->GetNextSibling(aResource);
+                    if (aResource == mCurrentResource)
+                        break;
+                }
+
+                std::string possiblePath = mAssetRoot + "/";
+                if (aLastDefaultSettings.get())
+                {
+                    possiblePath = possiblePath + aLastDefaultSettings->mPath + "/";
+                }
+                possiblePath = possiblePath + mResourceManifest.mGroupMap[aResourceData->mParent].GetResource(aResourceData->mID)->mPath;
+
+                if (aResourceData->mSubType == ResourceSubType::TYPE_IMAGE)
+                {
+                    wxStaticBoxSizer* previewSizer = new wxStaticBoxSizer(wxVERTICAL, mRightPanel, "Preview");
+
+                    wxWindow* box = previewSizer->GetStaticBox();
+                    sizer->Add(previewSizer, 1, wxEXPAND | wxALL, 5);
+
+                    wxImage img;
+                    if (std::filesystem::exists(possiblePath + ".png"))
+                    {
+                        possiblePath += ".png";
+                        img.LoadFile(possiblePath);
+                        wxBitmap bmp(img);
+                        wxBitmap aPNGPreview = bmp;
+                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aPNGPreview), wxSizerFlags().Border());
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".jpeg"))
+                    {
+                        possiblePath += ".jpeg";
+
+                        img.LoadFile(possiblePath);
+                        wxBitmap bmp(img);
+                        wxBitmap aJPEGPreview = bmp;
+                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aJPEGPreview), wxSizerFlags().Border());
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".jpg"))
+                    {
+                        possiblePath += ".jpg";
+
+                        img.LoadFile(possiblePath);
+                        wxBitmap bmp(img);
+                        wxBitmap aJPGPreview = bmp;
+                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aJPGPreview), wxSizerFlags().Border());
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".gif"))
+                    {
+                        possiblePath += ".gif";
+
+                        img.LoadFile(possiblePath);
+                        wxBitmap bmp(img);
+                        wxBitmap aGIFPreview = bmp;
+                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aGIFPreview), wxSizerFlags().Border());
+                    }
+                }
+                else if (aResourceData->mSubType == ResourceSubType::TYPE_SOUND)
+                {
+                    if (std::filesystem::exists(possiblePath + ".mp3"))
+                    {
+                        possiblePath += ".mp3";
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".ogg"))
+                    {
+                        possiblePath += ".ogg";
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".wav"))
+                    {
+                        possiblePath += ".wav";
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".flac"))
+                    {
+                        possiblePath += ".flac";
+                    }
+                    else if (std::filesystem::exists(possiblePath + ".au"))
+                    {
+                        possiblePath += ".au";
+                    }
+                }
+                wxButton* anExternalBttn = new wxButton(settingsPanel, wxID_ANY, "Open externally");
+                anExternalBttn->Bind(wxEVT_BUTTON, [=](wxCommandEvent&)
+                {
+                    wxLaunchDefaultApplication(possiblePath);
+                });
+                settingsSizer->Add(anExternalBttn, 0, wxALL, 5);
             }
 
             sizer->Add(settingsPanel, 2, wxEXPAND | wxALL, 5);
@@ -410,7 +579,7 @@ void ResourceFrame::AddImage(wxCommandEvent& event)
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "IMAGE_NEW");
     mResourceTree->SetItemData(newItem, new ResourceItemData("IMAGE_NEW", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_IMAGE));
 
-    mItems["IMAGE_NEW"] = newItem;
+    mItems[data->mID + "/IMAGE_NEW"] = newItem;
     mResourceManifest.AddImage(data->mID, "IMAGE_NEW");
 }
 
@@ -424,7 +593,7 @@ void ResourceFrame::AddSound(wxCommandEvent& event)
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "SOUND_NEW");
     mResourceTree->SetItemData(newItem, new ResourceItemData("SOUND_NEW", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_SOUND));
 
-    mItems["SOUND_NEW"] = newItem;
+    mItems[data->mID + "/SOUND_NEW"] = newItem;
     mResourceManifest.AddSound(data->mID, "SOUND_NEW");
 }
 
@@ -438,7 +607,7 @@ void ResourceFrame::AddFont(wxCommandEvent& event)
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "FONT_NEW");
     mResourceTree->SetItemData(newItem, new ResourceItemData("FONT_NEW", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_FONT));
 
-    mItems["FONT_NEW"] = newItem;
+    mItems[data->mID + "/FONT_NEW"] = newItem;
     mResourceManifest.AddFont(data->mID, "FONT_NEW");
 }
 
@@ -452,7 +621,7 @@ void ResourceFrame::AddDefaultSettings(wxCommandEvent& event)
     wxTreeItemId newItem = mResourceTree->AppendItem(root, "NEW_SETTINGS");
     mResourceTree->SetItemData(newItem, new ResourceItemData("NEW_SETTINGS", ResourceType::TYPE_RESOURCE, data->mID, ResourceSubType::TYPE_DEFAULT_SETTINGS));
 
-    mItems["NEW_SETTINGS"] = newItem;
+    mItems[data->mID + "/NEW_SETTINGS"] = newItem;
     mResourceManifest.AddDefaultSettings(data->mID, "NEW_SETTINGS");
 }
 
@@ -473,64 +642,6 @@ void ResourceFrame::RenameItem(wxCommandEvent& event)
     if (item == mResourceTree->GetRootItem())
         return;
     mResourceTree->EditLabel(item);
-}
-
-bool HasPrevious(wxTreeCtrl* tree, wxTreeItemId item)
-{
-    wxTreeItemId prev = tree->GetPrevSibling(item);
-    return prev.IsOk();
-}
-
-bool HasNext(wxTreeCtrl* tree, wxTreeItemId item)
-{
-    wxTreeItemId next = tree->GetNextSibling(item);
-    return next.IsOk();
-}
-
-wxTreeItemId FindItemByID(wxTreeCtrl* tree, wxTreeItemId parent, std::string id)
-{
-    ResourceItemData* data = (ResourceItemData*)tree->GetItemData(parent);
-    if (data)
-    {
-        std::string key = data->mParent + "/" + data->mID;
-        if (key == id)
-            return parent;
-    }
-
-    wxTreeItemIdValue cookie;
-    wxTreeItemId child = tree->GetFirstChild(parent, cookie);
-
-    while (child.IsOk())
-    {
-        wxTreeItemId result = FindItemByID(tree, child, id);
-        if (result.IsOk())
-            return result;
-
-        child = tree->GetNextChild(parent, cookie);
-    }
-
-    return wxTreeItemId();
-}
-
-void CollectExpandedItems(wxTreeCtrl* tree, wxTreeItemId root, std::vector<std::string>& out)
-{
-    if (!root.IsOk())
-        return;
-    if (tree->IsExpanded(root))
-    {
-        ResourceItemData* data = (ResourceItemData*)tree->GetItemData(root);
-        if (data)
-            out.push_back(data->mParent + "/" + data->mID);
-    }
-
-    wxTreeItemIdValue cookie;
-    wxTreeItemId child = tree->GetFirstChild(root, cookie);
-
-    while (child.IsOk())
-    {
-        CollectExpandedItems(tree, child, out);
-        child = tree->GetNextChild(root, cookie);
-    }
 }
 
 void ResourceFrame::MoveUpItem(wxCommandEvent& event)
@@ -700,7 +811,7 @@ void ResourceFrame::AddImageImpl(std::string theName, std::string theGroup)
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
     mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_IMAGE));
-    mItems[theName] = newItem;
+    mItems[theGroup + "/" + theName] = newItem;
 }
 
 void ResourceFrame::AddSoundImpl(std::string theName, std::string theGroup)
@@ -708,7 +819,7 @@ void ResourceFrame::AddSoundImpl(std::string theName, std::string theGroup)
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
     mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_SOUND));
-    mItems[theName] = newItem;
+    mItems[theGroup + "/" + theName] = newItem;
 }
 
 void ResourceFrame::AddFontImpl(std::string theName, std::string theGroup)
@@ -716,7 +827,7 @@ void ResourceFrame::AddFontImpl(std::string theName, std::string theGroup)
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
     mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_FONT));
-    mItems[theName] = newItem;
+    mItems[theGroup + "/" + theName] = newItem;
 }
 
 void ResourceFrame::AddDefaultSettingsImpl(std::string theName, std::string theGroup)
@@ -724,5 +835,5 @@ void ResourceFrame::AddDefaultSettingsImpl(std::string theName, std::string theG
     wxTreeItemId aGroupItem = mItems[theGroup];
     wxTreeItemId newItem = mResourceTree->AppendItem(aGroupItem, theName.c_str());
     mResourceTree->SetItemData(newItem, new ResourceItemData(theName, ResourceType::TYPE_RESOURCE, theGroup, ResourceSubType::TYPE_DEFAULT_SETTINGS));
-    mItems[theName] = newItem;
+    mItems[theGroup + "/" + theName] = newItem;
 }
