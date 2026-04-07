@@ -332,8 +332,9 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 colThing->Add(aStepperCol, 1);
                 settingsSizer->Add(colThing, 0, wxEXPAND | wxALL, 5);
                 aStepperCol->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mCols);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageColumns, this, ID_RESOURCE_STEP_COL);
 
-                wxSpinCtrl* aStepperRow = new wxSpinCtrl(settingsPanel, ID_RESOURCE_STEP_COL);
+                wxSpinCtrl* aStepperRow = new wxSpinCtrl(settingsPanel, ID_RESOURCE_STEP_ROW);
                 aStepperRow->SetMin(1);
                 wxBoxSizer* rowThing = new wxBoxSizer(wxHORIZONTAL);
                 rowThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Rows:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
@@ -422,47 +423,35 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
 
                 if (aResourceData->mSubType == ResourceSubType::TYPE_IMAGE)
                 {
-                    wxStaticBoxSizer* previewSizer = new wxStaticBoxSizer(wxVERTICAL, mRightPanel, "Preview");
+                    auto anIMGData = mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID);
+                    wxStaticBoxSizer* previewSizer = new wxStaticBoxSizer(wxHORIZONTAL, mRightPanel, "Preview");
 
                     wxWindow* box = previewSizer->GetStaticBox();
                     sizer->Add(previewSizer, 1, wxEXPAND | wxALL, 5);
 
                     wxImage img;
-                    if (std::filesystem::exists(possiblePath + ".png"))
-                    {
-                        possiblePath += ".png";
-                        img.LoadFile(possiblePath);
-                        wxBitmap bmp(img);
-                        wxBitmap aPNGPreview = bmp;
-                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aPNGPreview), wxSizerFlags().Border());
-                    }
-                    else if (std::filesystem::exists(possiblePath + ".jpeg"))
-                    {
-                        possiblePath += ".jpeg";
 
-                        img.LoadFile(possiblePath);
-                        wxBitmap bmp(img);
-                        wxBitmap aJPEGPreview = bmp;
-                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aJPEGPreview), wxSizerFlags().Border());
-                    }
-                    else if (std::filesystem::exists(possiblePath + ".jpg"))
+                    const char* exts[] = { ".png", ".jpeg", ".jpg", ".gif" };
+                    wxString finalPath;
+                    for (auto ext : exts)
                     {
-                        possiblePath += ".jpg";
-
-                        img.LoadFile(possiblePath);
-                        wxBitmap bmp(img);
-                        wxBitmap aJPGPreview = bmp;
-                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aJPGPreview), wxSizerFlags().Border());
+                        if (std::filesystem::exists(possiblePath + ext))
+                        {
+                            finalPath = possiblePath + ext;
+                            break;
+                        }
                     }
-                    else if (std::filesystem::exists(possiblePath + ".gif"))
+                    if (!finalPath.empty())
                     {
-                        possiblePath += ".gif";
-
-                        img.LoadFile(possiblePath);
+                        img.LoadFile(finalPath);
                         wxBitmap bmp(img);
-                        wxBitmap aGIFPreview = bmp;
-                        previewSizer->Add(new wxStaticBitmap(box, wxID_ANY, aGIFPreview), wxSizerFlags().Border());
+                        mPreviewImage = new PreviewImage(box);
+                        mPreviewImage->SetImage(bmp);
+                        previewSizer->Add(mPreviewImage, wxSizerFlags(1).Border(wxALL, 5));
                     }
+
+                    if (mPreviewImage != nullptr)
+                        mPreviewImage->SetGridSize(anIMGData->mRows, anIMGData->mCols);
                 }
                 else if (aResourceData->mSubType == ResourceSubType::TYPE_SOUND)
                 {
@@ -775,6 +764,7 @@ void ResourceFrame::SetImageColumns(wxSpinEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mCols = event.GetValue();
+    mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
 }
 
 void ResourceFrame::SetImageRow(wxSpinEvent& event)
@@ -782,6 +772,7 @@ void ResourceFrame::SetImageRow(wxSpinEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mRows = event.GetValue();
+    mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
 }
 
 void ResourceFrame::SetImageAlphaGrid(wxCommandEvent& event)

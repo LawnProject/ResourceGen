@@ -3,6 +3,7 @@
 #include <wx/wx.h>
 #include <wx/treebase.h>
 #include "ResourceManifest.h"
+#include "PreviewImage.h"
 
 class ResourceFrame : public wxFrame
 {
@@ -53,6 +54,8 @@ public:
 	std::string mItemStrEditingNow;
 	std::string mAssetRoot;
 	std::pair<std::string, std::string> mSwappingItems;
+
+	PreviewImage* mPreviewImage = nullptr;
 
 private:
 
