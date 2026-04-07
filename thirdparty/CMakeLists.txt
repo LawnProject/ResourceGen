@@ -21,4 +21,10 @@ FetchContent_Declare(
     GIT_TAG        11.0.0
 )
 
-FetchContent_MakeAvailable(SDL3 wxWidgets tinyxml2)
+FetchContent_Declare(
+    fmt 
+    GIT_REPOSITORY https://github.com/fmtlib/fmt
+    GIT_TAG        main
+)
+
+FetchContent_MakeAvailable(SDL3 wxWidgets tinyxml2 fmt)

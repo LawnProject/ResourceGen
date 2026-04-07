@@ -17,6 +17,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     SDL3::SDL3-static
     wx::base wx::core
     tinyxml2
+    fmt
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

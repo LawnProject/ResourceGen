@@ -1,9 +1,11 @@
 #include "ResourceFrame.h"
 #include "ResourceItem.h"
+#include "ResourceSourceGen.h"
 #include <wx/treectrl.h>
 #include <wx/spinctrl.h>
 #include <wx/splitter.h>
 #include <filesystem>
+#include <wx/textfile.h>
 
 
 bool HasPrevious(wxTreeCtrl* tree, wxTreeItemId item)
@@ -271,11 +273,21 @@ void ResourceFrame::OnSaveFile(wxCommandEvent& event)
 
 void ResourceFrame::OnGenerateSourceFile(wxCommandEvent& event)
 {
-    wxFileDialog saveFileDialog(this, _("Source files"), "", "", "", wxFD_SAVE);
+    wxFileDialog saveFileDialog(this, _("Source files"), "", "", "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (saveFileDialog.ShowModal() == wxID_CANCEL)
         return;
 
-    wxLogMessage("THIS FEATURE ISN'T IMPLEMENTED YET\n - Electr0Gunner");
+    std::string aSrcOutput = ResourceSourceGen::GenerateSourceFile(mResourceManifest, saveFileDialog.GetFilename().ToStdString());
+    wxTextFile file;
+    file.Create(saveFileDialog.GetPath() + ".cpp");
+    file.Open(saveFileDialog.GetPath() + ".cpp");
+    file.Clear();
+    file.AddLine(aSrcOutput);
+    file.Write();
+    file.Close();
+
+
+    wxLogMessage("Succesfully exported " + saveFileDialog.GetFilename().ToStdString() + ".cpp");
 }
 
 void ResourceFrame::OnSetAssetRoot(wxCommandEvent& event)
