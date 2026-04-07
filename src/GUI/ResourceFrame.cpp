@@ -278,16 +278,25 @@ void ResourceFrame::OnGenerateSourceFile(wxCommandEvent& event)
         return;
 
     std::string aSrcOutput = ResourceSourceGen::GenerateSourceFile(mResourceManifest, saveFileDialog.GetFilename().ToStdString());
+    std::string aHeaderOutput = ResourceSourceGen::GenerateHeaderFile(mResourceManifest, saveFileDialog.GetFilename().ToStdString());
     wxTextFile file;
     file.Create(saveFileDialog.GetPath() + ".cpp");
     file.Open(saveFileDialog.GetPath() + ".cpp");
     file.Clear();
     file.AddLine(aSrcOutput);
     file.Write();
+    file.Close();    
+    wxLogMessage("Succesfully exported " + saveFileDialog.GetFilename().ToStdString() + ".cpp");
+
+    file.Create(saveFileDialog.GetPath() + ".h");
+    file.Open(saveFileDialog.GetPath() + ".h");
+    file.Clear();
+    file.AddLine(aHeaderOutput);
+    file.Write();
     file.Close();
 
-
-    wxLogMessage("Succesfully exported " + saveFileDialog.GetFilename().ToStdString() + ".cpp");
+    wxLogMessage("Succesfully exported " + saveFileDialog.GetFilename().ToStdString() + ".h");
+    wxLogMessage("Succesfully exported source files");
 }
 
 void ResourceFrame::OnSetAssetRoot(wxCommandEvent& event)
@@ -306,6 +315,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     ResourceItemData* aResourceData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     mRightPanel->Freeze();
     mRightPanel->DestroyChildren(); 
+    mPreviewImage = nullptr;
     mRightPanel->SetSizer(nullptr);
 
     switch (aResourceData->mType)

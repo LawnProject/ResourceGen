@@ -267,6 +267,101 @@ public:
 		return aSrcOutput;
 	}
 
+	static std::string GenerateHeaderFile(const ResourceManifest& theManifest, const std::string& theFilename)
+	{
+		std::string aHeaderOutput;
+
+		aHeaderOutput += "#pragma once\n";
+		aHeaderOutput += "namespace Sexy\n";
+		aHeaderOutput += "{\n";
+		aHeaderOutput += "\tclass ResourceManager;\n";
+		aHeaderOutput += "\tclass Image;\n";
+		aHeaderOutput += "\tclass Font;\n";
+
+		aHeaderOutput += fmt::format("\tImage* {}LoadImageById(ResourceManager *theManager, int theId);", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tvoid {}ReplaceImageById(ResourceManager *theManager, int theId, Image *theImage);\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tbool {}ExtractResourcesByName(ResourceManager *theManager, const char *theName);\n\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tbool {}ExtractResourcesByName(ResourceManager *theManager, const char *theName);\n\n", FUNCTION_PREFIX_TODO);
+
+		for (auto group : theManifest.mGroupMap)
+		{
+			aHeaderOutput += fmt::format("\t// {} Resources\n", group.first.c_str());
+			aHeaderOutput += fmt::format("\tbool {}Extract{}Resources(ResourceManager *theMgr);\n", FUNCTION_PREFIX_TODO, group.first.c_str());
+
+			DefaultSettings* aLastSettings = nullptr;
+			for (auto res : group.second.mResourceMap)
+			{
+				std::string aTypeStr;
+				switch (res.second->mType)
+				{
+				case ResourceSubType::TYPE_IMAGE:
+					aTypeStr = "Image*";
+					break;
+				case ResourceSubType::TYPE_FONT:
+					aTypeStr = "Font*";
+					break;
+				case ResourceSubType::TYPE_SOUND:
+					aTypeStr = "int";
+					break;
+				case ResourceSubType::TYPE_DEFAULT_SETTINGS:
+					aLastSettings = group.second.GetDefaultSettings(res.second->mID).get();
+					continue;
+				default:
+					continue;
+				}
+				if (aLastSettings != nullptr)
+					aHeaderOutput += fmt::format("\textern {} {};\n", aTypeStr.c_str(), (aLastSettings->mIDPrefix + res.second->mID).c_str());
+				else
+					aHeaderOutput += fmt::format("\textern {} {};\n", aTypeStr.c_str(), res.second->mID.c_str());
+			}
+
+			aHeaderOutput += "\n";
+
+		}
+
+		aHeaderOutput += fmt::format("\tenum {}ResourceId\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += "\t{\n";
+
+		for (auto group : theManifest.mGroupMap)
+		{
+			DefaultSettings* aLastSettings = nullptr;
+			for (auto res : group.second.mResourceMap)
+			{
+				if (res.second->mType == ResourceSubType::TYPE_DEFAULT_SETTINGS)
+				{
+					aLastSettings = group.second.GetDefaultSettings(res.second->mID).get();
+					continue;
+				}
+				if (aLastSettings != nullptr)
+					aHeaderOutput += fmt::format("\t\t{}_ID,\n", (aLastSettings->mIDPrefix + res.second->mID).c_str());
+				else
+					aHeaderOutput += fmt::format("\t\t{}_ID,\n", res.second->mID.c_str());
+
+				//uhh todo: Aliases? whatever are they
+			}
+
+		}
+		aHeaderOutput += fmt::format("\t\t{}RESOURCE_ID_MAX\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += "\t};\n\n";
+		aHeaderOutput += fmt::format("\tImage* {}GetImageById(int theId);\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tFont* {}GetFontById(int theId);\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tint {}GetSoundById(int theId);\n\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tImage*& {}GetImageRefById(int theId);\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tFont*& {}GetFontRefById(int theId);\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tint& {}GetSoundRefById(int theId);\n\n", FUNCTION_PREFIX_TODO);
+
+		aHeaderOutput += fmt::format("\t{}ResourceId {}GetIdByImage(Image *theImage);\n", FUNCTION_PREFIX_TODO, FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\t{}ResourceId {}GetIdByFont(Font *theFont);\n", FUNCTION_PREFIX_TODO, FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\t{}ResourceId {}GetIdBySound(int theSound);\n\n", FUNCTION_PREFIX_TODO, FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\tconst char* {}GetStringIdById(int theId);\n", FUNCTION_PREFIX_TODO);
+		aHeaderOutput += fmt::format("\t{}ResourceId {}GetIdByStringId(const char *theStringId);\n\n", FUNCTION_PREFIX_TODO, FUNCTION_PREFIX_TODO);
+
+		aHeaderOutput += "} // namespace Sexy\n";
+
+
+		return aHeaderOutput;
+	}
+
 private:
 
 };
