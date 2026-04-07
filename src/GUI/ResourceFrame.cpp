@@ -654,6 +654,10 @@ void ResourceFrame::MoveUpItem(wxCommandEvent& event)
         return;
     swap(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index], mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap.begin()[index - 1]);
     std::vector<std::string> aExpandedData;
+    float scrollFactor = mResourceTree->GetScrollPos(wxVERTICAL);
+    auto* aData = (ResourceItemData*)mResourceTree->GetItemData(selected);
+    std::string selectedItem = aData->mParent + "/" + aData->mID;
+    std::string selectedRoot = ((ResourceItemData*)mResourceTree->GetItemData(mResourceTree->GetItemParent(selected)))->mParent + "/" + aData->mParent;
     CollectExpandedItems(mResourceTree, mRoot, aExpandedData);
     mResourceTree->Freeze();
     mResourceTree->DeleteAllItems();
@@ -686,8 +690,15 @@ void ResourceFrame::MoveUpItem(wxCommandEvent& event)
     for (auto data : aExpandedData)
     {
         wxTreeItemId aItem = FindItemByID(mResourceTree, mRoot, data);
+        if (data == selectedRoot)
+        {
+            wxTreeItemId aChildItem = FindItemByID(mResourceTree, aItem, selectedItem);
+
+            mResourceTree->ToggleItemSelection(aChildItem);
+        }
         mResourceTree->Expand(aItem);
     }
+    mResourceTree->SetScrollPos(wxVERTICAL, scrollFactor, false);
     mResourceTree->Thaw();
 }
 
@@ -713,13 +724,15 @@ void ResourceFrame::MoveDownItem(wxCommandEvent& event)
 
     swap(mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index], mResourceManifest.mGroupMap[mSwappingItems.first].mResourceMap[index + 1]);
     std::vector<std::string> aExpandedData;
+    float scrollFactor = mResourceTree->GetScrollPos(wxVERTICAL);
+    auto* aData = (ResourceItemData*)mResourceTree->GetItemData(selected);
+    std::string selectedItem = aData->mParent + "/" + aData->mID;
+    std::string selectedRoot = ((ResourceItemData*)mResourceTree->GetItemData(mResourceTree->GetItemParent(selected)))->mParent + "/" + aData->mParent;
     CollectExpandedItems(mResourceTree, mRoot, aExpandedData);
     mResourceTree->Freeze();
-
     mResourceTree->DeleteAllItems();
     mRoot = mResourceTree->AddRoot("Resource Project");
     mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
-    mResourceTree->ExpandAll();
 
     for (auto group : mResourceManifest.mGroupMap)
     {
@@ -747,8 +760,15 @@ void ResourceFrame::MoveDownItem(wxCommandEvent& event)
     for (auto data : aExpandedData)
     {
         wxTreeItemId aItem = FindItemByID(mResourceTree, mRoot, data);
+        if (data == selectedRoot)
+        {
+            wxTreeItemId aChildItem = FindItemByID(mResourceTree, aItem, selectedItem);
+
+            mResourceTree->ToggleItemSelection(aChildItem);
+        }
         mResourceTree->Expand(aItem);
     }
+    mResourceTree->SetScrollPos(wxVERTICAL, scrollFactor, false);
     mResourceTree->Thaw();
 }
 
