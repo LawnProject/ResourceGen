@@ -166,10 +166,10 @@ void ResourceManifest::Export(std::string theXMLPath)
 					aSound->SetAttribute("id", element->mID.c_str());
 					aSound->SetAttribute("path", element->mPath.c_str());
 
-					if (sound->mVolume != -1.0)
+					if (sound->mVolume > 0)
 						aSound->SetAttribute("volume", sound->mVolume);
 
-					if (sound->mPanning != -1.0)
+					if (sound->mPanning != 0)
 						aSound->SetAttribute("volume", sound->mPanning);
 
 					break;
@@ -311,13 +311,10 @@ void ResourceManifest::Import(std::string theXMLPath)
 				res->mPath = resPath;
 
 				if (child->Attribute("volume") != 0)
-				{
 					res->mVolume = atof(child->Attribute("volume"));
-				}
-					 
 
 				if (child->Attribute("pan") != 0)
-					res->mPanning = atof(child->Attribute("volume"));
+					res->mPanning = atof(child->Attribute("pan"));
 			}
 			else if (aName == "Font")
 			{

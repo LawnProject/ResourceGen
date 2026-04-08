@@ -23,7 +23,7 @@ class ResourceSound : public BaseResource
 {
 	public:
 		double mVolume = -1.0;
-		double mPanning = -1.0;
+		double mPanning = 0;
 };
 class ResourceFont : public BaseResource
 {

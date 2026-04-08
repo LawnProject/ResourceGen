@@ -623,21 +623,23 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
 
 
                 wxSpinCtrl* aStepperVol = new wxSpinCtrl(settingsPanel, ID_RESOURCE_VOLUME_STEP);
-                aStepperVol->SetMin(1);
+                aStepperVol->SetMin(-1);
+                aStepperVol->SetMax(100);
                 wxBoxSizer* colThing = new wxBoxSizer(wxHORIZONTAL);
-                colThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Volume:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                colThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Volume (0-100):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 colThing->Add(aStepperVol, 1);
                 settingsSizer->Add(colThing, 0, wxEXPAND | wxALL, 5);
-                aStepperVol->SetValue(aSoundData->mVolume);
+                aStepperVol->SetValue(aSoundData->mVolume * 100); //Do the 0-100 range
                 Bind(wxEVT_SPINCTRL, &ResourceFrame::SetSoundVolume, this, ID_RESOURCE_VOLUME_STEP);
 
                 wxSpinCtrl* aStepperPan = new wxSpinCtrl(settingsPanel, ID_RESOURCE_PANNING_STEP);
-                aStepperPan->SetMin(1);
+                aStepperPan->SetMin(-1000); //todo: determine max bounds of panning
+                aStepperPan->SetMax(1000);
                 wxBoxSizer* rowThing = new wxBoxSizer(wxHORIZONTAL);
                 rowThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Panning:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 rowThing->Add(aStepperPan, 1);
                 settingsSizer->Add(rowThing, 0, wxEXPAND | wxALL, 5);
-                aStepperPan->SetValue(aSoundData->mPanning);
+                aStepperPan->SetValue(aSoundData->mPanning * 100);
                 Bind(wxEVT_SPINCTRL, &ResourceFrame::SetSoundPanning, this, ID_RESOURCE_PANNING_STEP);
 
                 break;
@@ -1256,14 +1258,14 @@ void ResourceFrame::SetSoundVolume(wxSpinEvent& event)
 {
     ResourceItemData* aSoundData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto aSound = mResourceManifest.mGroupMap[aSoundData->mParent].GetSound(aSoundData->mID);
-    aSound->mVolume = event.GetValue();
+    aSound->mVolume = event.GetValue() / 100;
 }
 
 void ResourceFrame::SetSoundPanning(wxSpinEvent& event)
 {
     ResourceItemData* aSoundData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto aSound = mResourceManifest.mGroupMap[aSoundData->mParent].GetSound(aSoundData->mID);
-    aSound->mPanning = event.GetValue();
+    aSound->mPanning = event.GetValue() / 100;
 }
 
 void ResourceFrame::SetFontSys(wxCommandEvent& event)
