@@ -52,6 +52,15 @@ class ResourceImage : public BaseResource
 		bool mNoBits2D = false;
 		bool mNoBits = false;
 		bool mDDSurface = false;
+
+		//Animation stuff
+
+		std::string mAnimationType = "none";
+		int mFrameDelay = -1;
+		int mBeginDelay = -1;
+		int mEndDelay = -1; 
+		std::string mPerFrameDelay = ""; //both of em are formatted: 1,2,3,4,5,etc
+		std::string mFrameMap = "";
 };
 
 struct ResourceGroup

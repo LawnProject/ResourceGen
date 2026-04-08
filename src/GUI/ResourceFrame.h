@@ -38,6 +38,12 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_DDSURFACE_BOX,
 		ID_RESOURCE_PIXELFORMAT_BOX,
 		ID_RESOURCE_VARIANT_FIELD,
+		ID_RESOURCE_ANIMTYPE_BOX,
+		ID_RESOURCE_FRAMEDELAY_STEP,
+		ID_RESOURCE_BEGINDELAY_STEP,
+		ID_RESOURCE_ENDDELAY_STEP,
+		ID_RESOURCE_PERFRAMEDELAY_FIELD,
+		ID_RESOURCE_FRAMEMAP_FIELD,
 		ID_RESOURCE_IDPREFIX_FIELD,
 		ID_FRAMEWORK_SAF = 3001,
 		ID_FRAMEWORK_RESODDEDFRAMEWORK,
@@ -67,6 +73,11 @@ public:
 	wxCheckBox* mDDSurface = nullptr;
 	wxChoice* mPixelFormats = nullptr;
 	wxTextCtrl* mVariantField = nullptr;
+
+	wxChoice* mAnimTypes = nullptr;
+	wxTextCtrl* mPerFrameDelayField = nullptr;
+	wxTextCtrl* mFrameMapField = nullptr;
+
 
 
 	//Settings
@@ -134,6 +145,12 @@ private:
 	void SetImageDDSurface(wxCommandEvent& event);
 	void SetImageMinSubdivision(wxCommandEvent& event);
 	void SetImagePixelFormat(wxCommandEvent& event);
+	void SetImageAnimType(wxCommandEvent& event);
+	void SetImageFrameDelay(wxSpinEvent& event);
+	void SetImageBeginFrameDelay(wxSpinEvent& event);
+	void SetImageEndDelay(wxSpinEvent& event);
+	void SetImagePerFrameDelay(wxCommandEvent& event);
+	void SetImageFrameMap(wxCommandEvent& event);
 
 	//Setting functions
 	void SetDefaultSettingsIDPrefix(wxCommandEvent& event);

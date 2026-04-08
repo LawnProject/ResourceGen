@@ -359,6 +359,9 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     mDDSurface = nullptr;
     mVariantField = nullptr;
     mPixelFormats = nullptr;
+    mPerFrameDelayField = nullptr;
+    mAnimTypes = nullptr;
+    mFrameMapField = nullptr;
     mPreviewImage = nullptr;
     mRightPanel->SetSizer(nullptr);
 
@@ -386,18 +389,21 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
             {
             case ResourceSubType::TYPE_IMAGE:
             {
+                ResourceImage* anImageData = mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID).get();
+
                 settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Image Settings"), 0);
                 wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
                 pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 pathThing->Add(mPathField, 1);
                 settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+
                 wxSpinCtrl* aStepperCol = new wxSpinCtrl(settingsPanel, ID_RESOURCE_STEP_COL);
                 aStepperCol->SetMin(1);
                 wxBoxSizer* colThing = new wxBoxSizer(wxHORIZONTAL);
                 colThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Columns:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 colThing->Add(aStepperCol, 1);
                 settingsSizer->Add(colThing, 0, wxEXPAND | wxALL, 5);
-                aStepperCol->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mCols);
+                aStepperCol->SetValue(anImageData->mCols);
                 Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageColumns, this, ID_RESOURCE_STEP_COL);
 
                 wxSpinCtrl* aStepperRow = new wxSpinCtrl(settingsPanel, ID_RESOURCE_STEP_ROW);
@@ -406,7 +412,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 rowThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Rows:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 rowThing->Add(aStepperRow, 1);
                 settingsSizer->Add(rowThing, 0, wxEXPAND | wxALL, 5);
-                aStepperRow->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mRows);
+                aStepperRow->SetValue(anImageData->mRows);
                 Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageRow, this, ID_RESOURCE_STEP_ROW);
 
                 wxStaticLine* alphaLine = new wxStaticLine(settingsPanel, wxID_ANY);
@@ -417,7 +423,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 alpha1Thing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Mask:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 alpha1Thing->Add(mAlphaMaskField, 1);
                 settingsSizer->Add(alpha1Thing, 0, wxEXPAND | wxALL, 5);
-                mAlphaMaskField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaMask);
+                mAlphaMaskField->SetValue(anImageData->mAlphaMask);
                 Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaMask, this, ID_RESOURCE_ALPHA_MASK_FIELD);
 
                 mAlphaGridField = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_GRID_FIELD);
@@ -425,7 +431,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 alpha2Thing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Grid:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 alpha2Thing->Add(mAlphaGridField, 1);
                 settingsSizer->Add(alpha2Thing, 0, wxEXPAND | wxALL, 5);
-                mAlphaGridField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaGrid);
+                mAlphaGridField->SetValue(anImageData->mAlphaGrid);
                 Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaGrid, this, ID_RESOURCE_ALPHA_GRID_FIELD);
 
                 mAlphaColor = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_COLOR_FIELD);
@@ -433,11 +439,11 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 alpha3Thing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Color (Hexidecimal Format):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 alpha3Thing->Add(mAlphaColor, 1);
                 settingsSizer->Add(alpha3Thing, 0, wxEXPAND | wxALL, 5);
-                mAlphaColor->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaColor);
+                mAlphaColor->SetValue(anImageData->mAlphaColor);
                 Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaColor, this, ID_RESOURCE_ALPHA_COLOR_FIELD);
 
                 mNoAlpha = new wxCheckBox(settingsPanel, ID_RESOURCE_NO_ALPHA_BOX, "No Alpha");
-                mNoAlpha->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoAlpha);
+                mNoAlpha->SetValue(anImageData->mNoAlpha);
                 settingsSizer->Add(mNoAlpha, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_NO_ALPHA_BOX);
 
@@ -445,28 +451,28 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(formatLine, 0, wxEXPAND | wxALL, 5);
 
                 mPalletize = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Palletize");
-                mPalletize->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPalletize);
+                mPalletize->SetValue(anImageData->mPalletize);
                 settingsSizer->Add(mPalletize, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
 
                 mNoBits = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS_BOX, "No Bits");
-                mNoBits->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits);
+                mNoBits->SetValue(anImageData->mNoBits);
                 settingsSizer->Add(mNoBits, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits, this, ID_RESOURCE_NOBITS_BOX);
 
                 mNoBits3D = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS3D_BOX, "No Bits 3D");
-                mNoBits3D->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits3D);
+                mNoBits3D->SetValue(anImageData->mNoBits3D);
                 settingsSizer->Add(mNoBits3D, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits3D, this, ID_RESOURCE_NOBITS3D_BOX);
 
                 mNoBits2D = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS2D_BOX, "No Bits 2D");
-                mNoBits2D->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits2D);
+                mNoBits2D->SetValue(anImageData->mNoBits2D);
                 settingsSizer->Add(mNoBits2D, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits2D, this, ID_RESOURCE_NOBITS2D_BOX);
 
                 wxArrayString aFormatVec = { "default", "a4r4g4b4", "a8r8g8b8" };
                 mPixelFormats = new wxChoice(settingsPanel, ID_RESOURCE_PIXELFORMAT_BOX, wxDefaultPosition, wxDefaultSize, aFormatVec);
-                wxString aFormatString = mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPixelFormat;
+                wxString aFormatString = anImageData->mPixelFormat;
                 mPixelFormats->SetSelection(mPixelFormats->FindString(aFormatString));
                 wxBoxSizer* pixelThing = new wxBoxSizer(wxHORIZONTAL);
                 pixelThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Pixel Format:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
@@ -475,12 +481,12 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 Bind(wxEVT_CHOICE, &ResourceFrame::SetImagePixelFormat, this, ID_RESOURCE_PIXELFORMAT_BOX);
 
                 mMinimizeSubdivisions = new wxCheckBox(settingsPanel, ID_RESOURCE_MINSUBDIVISION_BOX, "Minimize Texture Subdivisons");
-                mMinimizeSubdivisions->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mMinimizeSubdivisions);
+                mMinimizeSubdivisions->SetValue(anImageData->mMinimizeSubdivisions);
                 settingsSizer->Add(mMinimizeSubdivisions, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageMinSubdivision, this, ID_RESOURCE_MINSUBDIVISION_BOX);
 
                 mDDSurface = new wxCheckBox(settingsPanel, ID_RESOURCE_DDSURFACE_BOX, "Use a DDSurface");
-                mDDSurface->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mDDSurface);
+                mDDSurface->SetValue(anImageData->mDDSurface);
                 settingsSizer->Add(mDDSurface, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageDDSurface, this, ID_RESOURCE_DDSURFACE_BOX);
 
@@ -492,11 +498,64 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 variantThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Variant:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 variantThing->Add(mVariantField, 1);
                 settingsSizer->Add(variantThing, 0, wxEXPAND | wxALL, 5);
-                mVariantField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mVariant);
+                mVariantField->SetValue(anImageData->mVariant);
                 Bind(wxEVT_TEXT, &ResourceFrame::SetImageVariant, this, ID_RESOURCE_VARIANT_FIELD);
 
                 wxStaticLine* animLine = new wxStaticLine(settingsPanel, wxID_ANY);
                 settingsSizer->Add(animLine, 0, wxEXPAND | wxALL, 5);
+
+                wxArrayString aAnimVec = { "none", "once", "loop" , "pingpong" };
+                mAnimTypes = new wxChoice(settingsPanel, ID_RESOURCE_ANIMTYPE_BOX, wxDefaultPosition, wxDefaultSize, aAnimVec);
+                wxString aAnimString = anImageData->mAnimationType;
+                mAnimTypes->SetSelection(mAnimTypes->FindString(aAnimString));
+                wxBoxSizer* animThing = new wxBoxSizer(wxHORIZONTAL);
+                animThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Animation Type:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                animThing->Add(mAnimTypes, 1);
+                settingsSizer->Add(animThing, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHOICE, &ResourceFrame::SetImageAnimType, this, ID_RESOURCE_ANIMTYPE_BOX);
+
+                wxSpinCtrl* aStepperFrameDelay= new wxSpinCtrl(settingsPanel, ID_RESOURCE_FRAMEDELAY_STEP);
+                aStepperFrameDelay->SetMin(-1);
+                wxBoxSizer* frameThing1 = new wxBoxSizer(wxHORIZONTAL);
+                frameThing1->Add(new wxStaticText(settingsPanel, wxID_ANY, "Frame Delay:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                frameThing1->Add(aStepperFrameDelay, 1);
+                settingsSizer->Add(frameThing1, 0, wxEXPAND | wxALL, 5);
+                aStepperFrameDelay->SetValue(anImageData->mFrameDelay);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageFrameDelay, this, ID_RESOURCE_FRAMEDELAY_STEP);
+
+                wxSpinCtrl* aStepperBeginDelay= new wxSpinCtrl(settingsPanel, ID_RESOURCE_BEGINDELAY_STEP);
+                aStepperBeginDelay->SetMin(-1);
+                wxBoxSizer* frameThing2 = new wxBoxSizer(wxHORIZONTAL);
+                frameThing2->Add(new wxStaticText(settingsPanel, wxID_ANY, "Begin Delay:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                frameThing2->Add(aStepperBeginDelay, 1);
+                settingsSizer->Add(frameThing2, 0, wxEXPAND | wxALL, 5);
+                aStepperBeginDelay->SetValue(anImageData->mBeginDelay);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageBeginFrameDelay, this, ID_RESOURCE_BEGINDELAY_STEP);
+
+                wxSpinCtrl* aStepperEndDelay = new wxSpinCtrl(settingsPanel, ID_RESOURCE_ENDDELAY_STEP);
+                aStepperEndDelay->SetMin(-1);
+                wxBoxSizer* frameThing3 = new wxBoxSizer(wxHORIZONTAL);
+                frameThing3->Add(new wxStaticText(settingsPanel, wxID_ANY, "End Delay:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                frameThing3->Add(aStepperEndDelay, 1);
+                settingsSizer->Add(frameThing3, 0, wxEXPAND | wxALL, 5);
+                aStepperEndDelay->SetValue(anImageData->mEndDelay);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageEndDelay, this, ID_RESOURCE_ENDDELAY_STEP);
+
+                mPerFrameDelayField = new wxTextCtrl(settingsPanel, ID_RESOURCE_PERFRAMEDELAY_FIELD);
+                wxBoxSizer* frameThing4 = new wxBoxSizer(wxHORIZONTAL);
+                frameThing4->Add(new wxStaticText(settingsPanel, wxID_ANY, "Per Frame Delay (1,2,3,4,....):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                frameThing4->Add(mPerFrameDelayField, 1);
+                settingsSizer->Add(frameThing4, 0, wxEXPAND | wxALL, 5);
+                mPerFrameDelayField->SetValue(anImageData->mPerFrameDelay);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImagePerFrameDelay, this, ID_RESOURCE_PERFRAMEDELAY_FIELD);
+
+                mFrameMapField = new wxTextCtrl(settingsPanel, ID_RESOURCE_FRAMEMAP_FIELD);
+                wxBoxSizer* frameThing5 = new wxBoxSizer(wxHORIZONTAL);
+                frameThing5->Add(new wxStaticText(settingsPanel, wxID_ANY, "Frame Map (1,4,-3,0,....):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                frameThing5->Add(mFrameMapField, 1);
+                settingsSizer->Add(frameThing5, 0, wxEXPAND | wxALL, 5);
+                mFrameMapField->SetValue(anImageData->mFrameMap);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImageFrameMap, this, ID_RESOURCE_FRAMEMAP_FIELD);
 
                 if (mResourceManifest.mFrameworkVersion == FrameworkVersion::VERSION_RESODDEDFRAMEWORK)
                 {
@@ -1035,6 +1094,48 @@ void ResourceFrame::SetImagePixelFormat(wxCommandEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mPixelFormat = mPixelFormats->GetString(mPixelFormats->GetSelection());
+}
+
+void ResourceFrame::SetImageAnimType(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mAnimationType = mAnimTypes->GetString(mAnimTypes->GetSelection());
+}
+
+void ResourceFrame::SetImageBeginFrameDelay(wxSpinEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mBeginDelay = event.GetValue();
+}
+
+void ResourceFrame::SetImageFrameDelay(wxSpinEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mFrameDelay = event.GetValue();
+}
+
+void ResourceFrame::SetImageEndDelay(wxSpinEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mEndDelay = event.GetValue();
+}
+
+void ResourceFrame::SetImagePerFrameDelay(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mPerFrameDelay = mPerFrameDelayField->GetValue();
+}
+
+void ResourceFrame::SetImageFrameMap(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mFrameMap = mFrameMapField->GetValue();
 }
 
 void ResourceFrame::SetDefaultSettingsIDPrefix(wxCommandEvent& event)

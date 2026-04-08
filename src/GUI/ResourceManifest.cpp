@@ -128,6 +128,35 @@ void ResourceManifest::Export(std::string theXMLPath)
 					if (image->mPixelFormat != "default")
 						anImage->SetAttribute(image->mPixelFormat.c_str(), "");
 
+					if (image->mAnimationType != "none")
+						anImage->SetAttribute("anim", image->mAnimationType.c_str());
+
+					if (image->mFrameDelay != -1)
+						anImage->SetAttribute("framedelay", image->mFrameDelay);
+
+					if (image->mBeginDelay != -1)
+						anImage->SetAttribute("begindelay", image->mBeginDelay);
+
+					if (image->mEndDelay != -1)
+						anImage->SetAttribute("enddelay", image->mEndDelay);
+
+					if (!image->mPerFrameDelay.empty())
+					{
+						auto new_end = remove(image->mPerFrameDelay.begin(), image->mPerFrameDelay.end(), ' ');
+						image->mPerFrameDelay.erase(new_end, image->mPerFrameDelay.end());
+
+						anImage->SetAttribute("perframedelay", image->mPerFrameDelay.c_str());
+					}
+						
+					if (!image->mFrameMap.empty())
+					{
+						auto new_end = remove(image->mFrameMap.begin(), image->mFrameMap.end(), ' ');
+						image->mFrameMap.erase(new_end, image->mFrameMap.end());
+
+						anImage->SetAttribute("framemap", image->mFrameMap.c_str());
+					}
+						
+
 					break;
 				}
 				case ResourceSubType::TYPE_SOUND:
@@ -225,6 +254,24 @@ void ResourceManifest::Import(std::string theXMLPath)
 
 				if (child->Attribute("cols") != 0)
 					res->mCols = atoi(child->Attribute("cols"));
+
+				if (child->Attribute("anim") != 0)
+					res->mAnimationType = child->Attribute("anim");
+
+				if (child->Attribute("framedelay") != 0)
+					res->mFrameDelay = atoi(child->Attribute("framedelay"));
+
+				if (child->Attribute("begindelay") != 0)
+					res->mBeginDelay = atoi(child->Attribute("begindelay"));
+
+				if (child->Attribute("enddelay") != 0)
+					res->mEndDelay = atoi(child->Attribute("enddelay"));
+
+				if (child->Attribute("perframedelay") != 0)
+					res->mPerFrameDelay = child->Attribute("perframedelay");
+
+				if (child->Attribute("framemap") != 0)
+					res->mFrameMap = child->Attribute("framemap");
 
 				if (child->Attribute("a8r8g8b8") != 0)
 					res->mPixelFormat = "a8r8g8b8";
