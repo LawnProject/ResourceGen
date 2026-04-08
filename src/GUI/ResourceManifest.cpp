@@ -83,8 +83,14 @@ void ResourceManifest::Export(std::string theXMLPath)
 					anImage->SetAttribute("id", element->mID.c_str());
 					anImage->SetAttribute("path", element->mPath.c_str());
 
-					if (image->mHasAlphaMask)
+					if (!image->mAlphaMask.empty())
+						anImage->SetAttribute("alphaimage", image->mAlphaMask.c_str());
+
+					if (!image->mAlphaGrid.empty())
 						anImage->SetAttribute("alphagrid", image->mAlphaGrid.c_str());
+
+					if (!image->mAlphaColor.empty())
+						anImage->SetAttribute("alphacolor", image->mAlphaColor.c_str());
 
 					if (image->mCols > 1)
 						anImage->SetAttribute("cols", image->mCols);
@@ -194,7 +200,6 @@ void ResourceManifest::Import(std::string theXMLPath)
 			{
 				auto res = AddImage(resourceGroup, resID);
 				res->mPath = resPath;
-				res->mHasAlphaMask = child->Attribute("alphagrid") != 0;
 				res->mPalletize = child->Attribute("nopal") == 0;
 				res->mMinimizeSubdivisions = child->Attribute("minsubdivide") != 0;
 				res->mNoAlpha = child->Attribute("noalpha") != 0;
@@ -202,8 +207,15 @@ void ResourceManifest::Import(std::string theXMLPath)
 				res->mNoBits2D = child->Attribute("nobits2d") != 0;
 				res->mNoBits3D = child->Attribute("nobits3d") != 0;
 				res->mDDSurface = child->Attribute("ddsurface") != 0;
-				if (res->mHasAlphaMask)
+
+				if (child->Attribute("alphagrid") != 0)
 					res->mAlphaGrid = child->Attribute("alphagrid");
+
+				if (child->Attribute("alphaimage") != 0)
+					res->mAlphaMask = child->Attribute("alphaimage");
+
+				if (child->Attribute("alphacolor") != 0)
+					res->mAlphaColor = child->Attribute("alphacolor");
 
 				if (child->Attribute("cols") != 0)
 					res->mCols = atoi(child->Attribute("cols"));

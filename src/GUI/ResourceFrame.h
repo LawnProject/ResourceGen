@@ -26,7 +26,9 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_PATH_FIELD = 2001,
 		ID_RESOURCE_STEP_COL,
 		ID_RESOURCE_STEP_ROW,
-		ID_RESOURCE_ALPHA_FIELD,
+		ID_RESOURCE_ALPHA_MASK_FIELD,
+		ID_RESOURCE_ALPHA_GRID_FIELD,
+		ID_RESOURCE_ALPHA_COLOR_FIELD,
 		ID_RESOURCE_NO_ALPHA_BOX,
 		ID_RESOURCE_PALLETIZE_BOX,
 		ID_RESOURCE_NOBITS_BOX,
@@ -52,7 +54,9 @@ public:
 	wxTextCtrl* mPathField = nullptr;
 
 	//Image
-	wxTextCtrl* mAlphaField = nullptr;
+	wxTextCtrl* mAlphaMaskField = nullptr;
+	wxTextCtrl* mAlphaGridField = nullptr;
+	wxTextCtrl* mAlphaColor = nullptr;
 	wxCheckBox* mNoAlpha = nullptr;
 	wxCheckBox* mPalletize = nullptr;
 	wxCheckBox* mMinimizeSubdivisions = nullptr;
@@ -115,7 +119,9 @@ private:
 	//Image functions
 	void SetImageColumns(wxSpinEvent& event);
 	void SetImageRow(wxSpinEvent& event);
+	void SetImageAlphaMask(wxCommandEvent& event);
 	void SetImageAlphaGrid(wxCommandEvent& event);
+	void SetImageAlphaColor(wxCommandEvent& event);
 	void SetImageNoAlpha(wxCommandEvent& event);
 	void SetImagePalletize(wxCommandEvent& event);
 	void SetImageNoBits(wxCommandEvent& event);

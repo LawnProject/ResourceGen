@@ -38,8 +38,9 @@ class ResourceFont : public BaseResource
 class ResourceImage : public BaseResource
 {
 	public:
-		bool mHasAlphaMask = false;
+		std::string mAlphaMask = "";
 		std::string mAlphaGrid = "";
+		std::string mAlphaColor = "";
 		int mRows = 1;
 		int mCols = 1;
 		std::string mPixelFormat = "default";

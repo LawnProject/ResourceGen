@@ -346,7 +346,9 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     mRightPanel->Freeze();
     mRightPanel->DestroyChildren(); 
     //Manually null them here
-    mAlphaField = nullptr;
+    mAlphaMaskField = nullptr;
+    mAlphaGridField = nullptr;
+    mAlphaColor = nullptr;
     mNoAlpha = nullptr;
     mPalletize = nullptr;
     mMinimizeSubdivisions = nullptr;
@@ -405,13 +407,29 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 aStepperRow->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mRows);
                 Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageRow, this, ID_RESOURCE_STEP_ROW);
 
-                mAlphaField = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_FIELD);
-                wxBoxSizer* alphaThing = new wxBoxSizer(wxHORIZONTAL);
-                alphaThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Mask:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-                alphaThing->Add(mAlphaField, 1);
-                settingsSizer->Add(alphaThing, 0, wxEXPAND | wxALL, 5);
-                mAlphaField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaGrid);
-                Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaGrid, this, ID_RESOURCE_ALPHA_FIELD);
+                mAlphaMaskField = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_MASK_FIELD);
+                wxBoxSizer* alpha1Thing = new wxBoxSizer(wxHORIZONTAL);
+                alpha1Thing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Mask:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                alpha1Thing->Add(mAlphaMaskField, 1);
+                settingsSizer->Add(alpha1Thing, 0, wxEXPAND | wxALL, 5);
+                mAlphaMaskField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaMask);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaMask, this, ID_RESOURCE_ALPHA_MASK_FIELD);
+
+                mAlphaGridField = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_GRID_FIELD);
+                wxBoxSizer* alpha2Thing = new wxBoxSizer(wxHORIZONTAL);
+                alpha2Thing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Grid:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                alpha2Thing->Add(mAlphaGridField, 1);
+                settingsSizer->Add(alpha2Thing, 0, wxEXPAND | wxALL, 5);
+                mAlphaGridField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaGrid);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaGrid, this, ID_RESOURCE_ALPHA_GRID_FIELD);
+
+                mAlphaColor = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_COLOR_FIELD);
+                wxBoxSizer* alpha3Thing = new wxBoxSizer(wxHORIZONTAL);
+                alpha3Thing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Alpha Color (Hexidecimal Format):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                alpha3Thing->Add(mAlphaColor, 1);
+                settingsSizer->Add(alpha3Thing, 0, wxEXPAND | wxALL, 5);
+                mAlphaColor->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaColor);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaColor, this, ID_RESOURCE_ALPHA_COLOR_FIELD);
 
                 mNoAlpha = new wxCheckBox(settingsPanel, ID_RESOURCE_NO_ALPHA_BOX, "No Alpha");
                 mNoAlpha->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoAlpha);
@@ -913,12 +931,25 @@ void ResourceFrame::SetImageRow(wxSpinEvent& event)
         mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
 }
 
+void ResourceFrame::SetImageAlphaMask(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mAlphaMask = mAlphaMaskField->GetValue();
+}
+
 void ResourceFrame::SetImageAlphaGrid(wxCommandEvent& event)
 {
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
-    anImage->mAlphaGrid = mAlphaField->GetValue();
-    anImage->mHasAlphaMask = !anImage->mAlphaGrid.empty();
+    anImage->mAlphaGrid = mAlphaGridField->GetValue();
+}
+
+void ResourceFrame::SetImageAlphaColor(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mAlphaColor = mAlphaColor->GetValue();
 }
 
 void ResourceFrame::SetImageNoAlpha(wxCommandEvent& event)
