@@ -69,7 +69,7 @@ void CollectExpandedItems(wxTreeCtrl* tree, wxTreeItemId root, std::vector<std::
 
 
 ResourceFrame::ResourceFrame()
-    : wxFrame(NULL, wxID_ANY, "ResourceGen - LawnProject", wxDefaultPosition, wxSize(800, 500))
+    : wxFrame(NULL, wxID_ANY, "ResourceGen - LawnProject - Alpha 1.0.0", wxDefaultPosition, wxSize(800, 500))
 {
     wxInitAllImageHandlers();
 
@@ -158,7 +158,7 @@ void ResourceFrame::OnExit(wxCommandEvent& event)
 
 void ResourceFrame::OnAbout(wxCommandEvent& event)
 {
-    wxMessageBox("ResourceGen is a modernized version of PopCap's ResourceGen Tool made for SexyAppFramework\n \nModern Version (add ver here please?) - Electr0Gunner",
+    wxMessageBox("ResourceGen is a modernized version of PopCap's ResourceGen Tool made for SexyAppFramework",
         "About ResourceGen", wxOK | wxICON_INFORMATION);
 }
 
