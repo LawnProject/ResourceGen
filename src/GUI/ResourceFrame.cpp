@@ -238,6 +238,8 @@ void ResourceFrame::OnItemRenameStart(wxTreeEvent& event)
 
 void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
 {
+    if (event.IsEditCancelled())
+        return;
     std::string aNewName = event.GetLabel();
 
     wxTreeItemId hoveredItem = event.GetItem();
@@ -270,7 +272,7 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
         return;
     }
 
-
+    mResourceTree->SetItemText(hoveredItem, aNewName);
     data->mID = aNewName;
 
     mItems[aNewName] = mItems[mItemStrEditingNow];
@@ -291,11 +293,16 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
     }
     else if (data->mType == ResourceType::TYPE_RESOURCE)
     {
-        auto it = std::find_if(mResourceManifest.mGroupMap[data->mParent].mResourceMap.begin(), mResourceManifest.mGroupMap[data->mParent].mResourceMap.end(),
+        auto& vec = mResourceManifest.mGroupMap.at(data->mParent).mResourceMap;
+
+        auto it = std::find_if(vec.begin(), vec.end(),
             [&](const auto& pair) { return pair.first == mItemStrEditingNow; });
 
-        if (it != mResourceManifest.mGroupMap[data->mParent].mResourceMap.end())
-            it->first = aNewName; // just rename cause it's a vector
+        if (it != vec.end())
+        {
+            it->first = aNewName;
+            it->second->mID = aNewName;
+        }
     }
 }
 
