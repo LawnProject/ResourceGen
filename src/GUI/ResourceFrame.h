@@ -27,6 +27,10 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_STEP_COL,
 		ID_RESOURCE_STEP_ROW,
 		ID_RESOURCE_ALPHA_FIELD,
+		ID_RESOURCE_NO_ALPHA_BOX,
+		ID_RESOURCE_PALLETIZE_BOX,
+		ID_RESOURCE_MINSUBDIVISION_BOX,
+		ID_RESOURCE_PIXELFORMAT_BOX,
 		ID_RESOURCE_IDPREFIX_FIELD,
 	};
 
@@ -43,6 +47,10 @@ public:
 
 	//Image
 	wxTextCtrl* mAlphaField;
+	wxCheckBox* mNoAlpha;
+	wxCheckBox* mPalletize;
+	wxCheckBox* mMinimizeSubdivisions;
+	wxChoice* mPixelFormats;
 
 	//Settings
 	wxTextCtrl* mIDPrefixField;
@@ -94,6 +102,10 @@ private:
 	void SetImageColumns(wxSpinEvent& event);
 	void SetImageRow(wxSpinEvent& event);
 	void SetImageAlphaGrid(wxCommandEvent& event);
+	void SetImageNoAlpha(wxCommandEvent& event);
+	void SetImagePalletize(wxCommandEvent& event);
+	void SetImageMinSubdivision(wxCommandEvent& event);
+	void SetImagePixelFormat(wxCommandEvent& event);
 
 	//Setting functions
 	void SetDefaultSettingsIDPrefix(wxCommandEvent& event);

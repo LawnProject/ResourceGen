@@ -91,6 +91,18 @@ void ResourceManifest::Export(std::string theXMLPath)
 
 					if (image->mRows > 1)
 						anImage->SetAttribute("rows", image->mRows);
+
+					if (image->mNoAlpha)
+						anImage->SetAttribute("noalpha", "");
+
+					if (image->mMinimizeSubdivisions)
+						anImage->SetAttribute("minsubdivide", "");
+
+					if (image->mPixelFormat != "default")
+						anImage->SetAttribute(image->mPixelFormat.c_str(), "");
+
+					if (!image->mPalletize)
+						anImage->SetAttribute("nopal", "");
 					break;
 				}
 				case ResourceSubType::TYPE_SOUND:
@@ -167,11 +179,21 @@ void ResourceManifest::Import(std::string theXMLPath)
 				auto res = AddImage(resourceGroup, resID);
 				res->mPath = resPath;
 				res->mHasAlphaMask = child->Attribute("alphagrid") != 0;
+				res->mPalletize = child->Attribute("nopal") == 0;
+				res->mMinimizeSubdivisions = child->Attribute("minsubdivide") != 0;
+				res->mNoAlpha = child->Attribute("noalpha") != 0;
 				if (res->mHasAlphaMask)
 					res->mAlphaGrid = child->Attribute("alphagrid");
 
 				if (child->Attribute("cols") != 0)
 					res->mCols = atoi(child->Attribute("cols"));
+
+				if (child->Attribute("a8r8g8b8") != 0)
+					res->mPixelFormat = "a8r8g8b8";
+				else if (child->Attribute("a4r4g4b4") != 0)
+					res->mPixelFormat = "a4r4g4b4";
+				else
+					res->mPixelFormat = "default";
 
 				if (child->Attribute("rows") != 0)
 					res->mRows = atoi(child->Attribute("rows"));

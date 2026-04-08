@@ -42,6 +42,10 @@ class ResourceImage : public BaseResource
 		std::string mAlphaGrid = "";
 		int mRows = 1;
 		int mCols = 1;
+		std::string mPixelFormat;
+		bool mNoAlpha = false;
+		bool mPalletize = false;
+		bool mMinimizeSubdivisions = false;
 };
 
 struct ResourceGroup

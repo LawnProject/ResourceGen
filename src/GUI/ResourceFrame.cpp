@@ -372,6 +372,33 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(alphaThing, 0, wxEXPAND | wxALL, 5);
                 mAlphaField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaGrid);
                 Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaGrid, this, ID_RESOURCE_ALPHA_FIELD);
+
+                mNoAlpha = new wxCheckBox(settingsPanel, ID_RESOURCE_NO_ALPHA_BOX, "No Alpha:");
+                mNoAlpha->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoAlpha);
+                settingsSizer->Add(mNoAlpha, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_NO_ALPHA_BOX);
+
+                mPalletize = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Palletize:");
+                mPalletize->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPalletize);
+                settingsSizer->Add(mPalletize, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
+
+                mMinimizeSubdivisions = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Minimize Texture Subdivisons:");
+                mMinimizeSubdivisions->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mMinimizeSubdivisions);
+                settingsSizer->Add(mMinimizeSubdivisions, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
+
+                wxArrayString aFormatVec = {"default", "a4r4g4b4", "a8r8g8b8"};
+                mPixelFormats = new wxChoice(settingsPanel, ID_RESOURCE_PIXELFORMAT_BOX, wxDefaultPosition, wxDefaultSize, aFormatVec);
+                wxString aFormatString = mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPixelFormat;
+                mPixelFormats->SetSelection(mPixelFormats->FindString(aFormatString));
+                wxBoxSizer* pixelThing = new wxBoxSizer(wxHORIZONTAL);
+                pixelThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Pixel Format:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                pixelThing->Add(mPixelFormats, 1);
+                settingsSizer->Add(pixelThing, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHOICE, &ResourceFrame::SetImagePixelFormat, this, ID_RESOURCE_PIXELFORMAT_BOX);
+
+
                 break;
             }
             case ResourceSubType::TYPE_DEFAULT_SETTINGS:
@@ -823,6 +850,34 @@ void ResourceFrame::SetImageAlphaGrid(wxCommandEvent& event)
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mAlphaGrid = mAlphaField->GetValue();
     anImage->mHasAlphaMask = !anImage->mAlphaGrid.empty();
+}
+
+void ResourceFrame::SetImageNoAlpha(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mNoAlpha = mNoAlpha->GetValue();
+}
+
+void ResourceFrame::SetImagePalletize(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mPalletize = mPalletize->GetValue();
+}
+
+void ResourceFrame::SetImageMinSubdivision(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mMinimizeSubdivisions = mMinimizeSubdivisions->GetValue();
+}
+
+void ResourceFrame::SetImagePixelFormat(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mPixelFormat = mPixelFormats->GetString(mPixelFormats->GetSelection());
 }
 
 void ResourceFrame::SetDefaultSettingsIDPrefix(wxCommandEvent& event)
