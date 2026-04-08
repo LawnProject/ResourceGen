@@ -95,14 +95,18 @@ void ResourceManifest::Export(std::string theXMLPath)
 					if (image->mNoAlpha)
 						anImage->SetAttribute("noalpha", "");
 
-					if (image->mMinimizeSubdivisions)
-						anImage->SetAttribute("minsubdivide", "");
+					if (mFrameworkVersion == FrameworkVersion::VERSION_SEXYAPPFRAMEWORK)
+					{
+						if (image->mMinimizeSubdivisions)
+							anImage->SetAttribute("minsubdivide", "");
+
+						if (!image->mPalletize)
+							anImage->SetAttribute("nopal", "");
+					}
 
 					if (image->mPixelFormat != "default")
 						anImage->SetAttribute(image->mPixelFormat.c_str(), "");
 
-					if (!image->mPalletize)
-						anImage->SetAttribute("nopal", "");
 					break;
 				}
 				case ResourceSubType::TYPE_SOUND:

@@ -103,6 +103,12 @@ struct ResourceGroup
 	}
 };
 
+enum class FrameworkVersion
+{
+	VERSION_SEXYAPPFRAMEWORK,
+	VERSION_RESODDEDFRAMEWORK,
+};
+
 class ResourceManifest
 {
 public:
@@ -121,6 +127,7 @@ public:
 	void RemoveResource(std::string theGroup, std::string theName);
 
 	std::map<std::string, ResourceGroup> mGroupMap;
+	FrameworkVersion mFrameworkVersion = FrameworkVersion::VERSION_SEXYAPPFRAMEWORK;
 
 private:
 

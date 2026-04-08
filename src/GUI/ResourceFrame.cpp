@@ -72,7 +72,7 @@ ResourceFrame::ResourceFrame()
 {
     wxInitAllImageHandlers();
 
-    wxMenu* menuFile = new wxMenu;
+    wxMenu* menuFile = new wxMenu();
     menuFile->Append(ID_FILE_NEW, "&New...",
         "Create a new resource project");
     menuFile->Append(ID_FILE_OPEN, "&Open...",
@@ -88,11 +88,24 @@ ResourceFrame::ResourceFrame()
     menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
 
-    wxMenu* menuHelp = new wxMenu;
+    wxMenu* menuHelp = new wxMenu();
     menuHelp->Append(wxID_ABOUT);
+
+    wxMenu* menuSettings = new wxMenu();
+
+    wxMenu* frameworkVersionRadio = new wxMenu();
+    frameworkVersionRadio->AppendRadioItem(ID_FRAMEWORK_SAF, "SexyAppFramework");
+    frameworkVersionRadio->AppendRadioItem(ID_FRAMEWORK_RESODDEDFRAMEWORK, "ResoddedFramework");
+    frameworkVersionRadio->Check(ID_FRAMEWORK_SAF, true);
+    menuSettings->AppendSubMenu(frameworkVersionRadio, "&Framework Version");
+
+    Bind(wxEVT_MENU, &ResourceFrame::SetFrameworkToSAF, this, ID_FRAMEWORK_SAF);
+    Bind(wxEVT_MENU, &ResourceFrame::SetFrameworkToResodded, this, ID_FRAMEWORK_RESODDEDFRAMEWORK);
+
 
     wxMenuBar* menuBar = new wxMenuBar;
     menuBar->Append(menuFile, "&File");
+    menuBar->Append(menuSettings, "&Settings");
     menuBar->Append(menuHelp, "&Help");
 
     SetMenuBar(menuBar);
@@ -262,6 +275,20 @@ void ResourceFrame::OnItemRenameEnd(wxTreeEvent& event)
     }
 }
 
+void ResourceFrame::SetFrameworkToSAF(wxCommandEvent& event)
+{
+    mResourceManifest.mFrameworkVersion = FrameworkVersion::VERSION_SEXYAPPFRAMEWORK;
+    if (mPalletize != nullptr) mPalletize->Enable();
+    if (mMinimizeSubdivisions != nullptr) mMinimizeSubdivisions->Enable();
+}
+
+void ResourceFrame::SetFrameworkToResodded(wxCommandEvent& event)
+{
+    mResourceManifest.mFrameworkVersion = FrameworkVersion::VERSION_RESODDEDFRAMEWORK;
+    if (mPalletize != nullptr) mPalletize->Disable();
+    if (mMinimizeSubdivisions != nullptr) mMinimizeSubdivisions->Disable();
+}
+
 void ResourceFrame::OnSaveFile(wxCommandEvent& event)
 {
     wxFileDialog saveFileDialog(this, _("Resource file"), "", "", "XML files (*.xml)|*.xml", wxFD_SAVE);
@@ -387,6 +414,12 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 mMinimizeSubdivisions->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mMinimizeSubdivisions);
                 settingsSizer->Add(mMinimizeSubdivisions, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
+
+                if (mResourceManifest.mFrameworkVersion == FrameworkVersion::VERSION_RESODDEDFRAMEWORK)
+                {
+                    mPalletize->Disable();
+                    mMinimizeSubdivisions->Disable();
+                }
 
                 wxArrayString aFormatVec = {"default", "a4r4g4b4", "a8r8g8b8"};
                 mPixelFormats = new wxChoice(settingsPanel, ID_RESOURCE_PIXELFORMAT_BOX, wxDefaultPosition, wxDefaultSize, aFormatVec);

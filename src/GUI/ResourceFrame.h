@@ -32,6 +32,8 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_MINSUBDIVISION_BOX,
 		ID_RESOURCE_PIXELFORMAT_BOX,
 		ID_RESOURCE_IDPREFIX_FIELD,
+		ID_FRAMEWORK_SAF = 3001,
+		ID_FRAMEWORK_RESODDEDFRAMEWORK,
 	};
 
 public:
@@ -40,17 +42,17 @@ public:
 
 	wxTreeItemId mRoot;
 	wxTreeItemId mCurrentResource;
-	wxPanel* mLeftPanel;
-	wxPanel* mRightPanel;
+	wxPanel* mLeftPanel = nullptr;
+	wxPanel* mRightPanel = nullptr;
 
-	wxTextCtrl* mPathField;
+	wxTextCtrl* mPathField = nullptr;
 
 	//Image
-	wxTextCtrl* mAlphaField;
-	wxCheckBox* mNoAlpha;
-	wxCheckBox* mPalletize;
-	wxCheckBox* mMinimizeSubdivisions;
-	wxChoice* mPixelFormats;
+	wxTextCtrl* mAlphaField = nullptr;
+	wxCheckBox* mNoAlpha = nullptr;
+	wxCheckBox* mPalletize = nullptr;
+	wxCheckBox* mMinimizeSubdivisions = nullptr;
+	wxChoice* mPixelFormats = nullptr;
 
 	//Settings
 	wxTextCtrl* mIDPrefixField;
@@ -79,6 +81,10 @@ private:
 	void OnTreeRightClick(wxTreeEvent& event);
 	void OnItemRenameStart(wxTreeEvent& event);
 	void OnItemRenameEnd(wxTreeEvent& event);
+
+	void SetFrameworkToSAF(wxCommandEvent& event);
+	void SetFrameworkToResodded(wxCommandEvent& event);
+
 
 	//Tree editing
 	void AddGroup(wxCommandEvent& event);

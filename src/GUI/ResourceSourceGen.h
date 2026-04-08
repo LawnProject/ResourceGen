@@ -10,7 +10,7 @@ public:
 	~ResourceSourceGen() {}
 	
 	//todo: function prefix
-#define FUNCTION_PREFIX_TODO "Lawn" //TODO: REPLACE
+#define FUNCTION_PREFIX_TODO "" //TODO: REPLACE
 
 	static std::string GenerateSourceFile(const ResourceManifest& theManifest, const std::string& theFilename)
 	{
@@ -177,21 +177,21 @@ public:
 
 		// GetImageRefById
 
-		aSrcOutput += fmt::format("Image* Sexy::{}GetImageRefById(int theId)\n", FUNCTION_PREFIX_TODO);
+		aSrcOutput += fmt::format("Image*& Sexy::{}GetImageRefById(int theId)\n", FUNCTION_PREFIX_TODO);
 		aSrcOutput += "{\n";
 		aSrcOutput += "\treturn *(Image**)gResources[theId];\n";
 		aSrcOutput += "}\n\n";
 
 		// GetFontRefById
 
-		aSrcOutput += fmt::format("Image* Sexy::{}GetFontById(int theId)\n", FUNCTION_PREFIX_TODO);
+		aSrcOutput += fmt::format("Font*& Sexy::{}GetFontRefById(int theId)\n", FUNCTION_PREFIX_TODO);
 		aSrcOutput += "{\n";
 		aSrcOutput += "\treturn *(Font**)gResources[theId];\n";
 		aSrcOutput += "}\n\n";
 
 		// GetSoundRefById
 
-		aSrcOutput += fmt::format("Image* Sexy::{}GetSoundRefById(int theId)\n", FUNCTION_PREFIX_TODO);
+		aSrcOutput += fmt::format("int& Sexy::{}GetSoundRefById(int theId)\n", FUNCTION_PREFIX_TODO);
 		aSrcOutput += "{\n";
 		aSrcOutput += "\treturn *(int*)gResources[theId];\n";
 		aSrcOutput += "}\n\n";
@@ -231,7 +231,7 @@ public:
 
 		aSrcOutput += fmt::format("Sexy::{}ResourceId Sexy::{}GetIdBySound(int theSound)\n", FUNCTION_PREFIX_TODO, FUNCTION_PREFIX_TODO);
 		aSrcOutput += "{\n";
-		aSrcOutput += fmt::format("\treturn {}GetIdByVariable(theSound);\n", FUNCTION_PREFIX_TODO);
+		aSrcOutput += fmt::format("\treturn {}GetIdByVariable((void*)theSound);\n", FUNCTION_PREFIX_TODO);
 		aSrcOutput += "}\n\n";
 
 		// GetStringIdById
