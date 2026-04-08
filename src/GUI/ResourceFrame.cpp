@@ -280,6 +280,8 @@ void ResourceFrame::SetFrameworkToSAF(wxCommandEvent& event)
     mResourceManifest.mFrameworkVersion = FrameworkVersion::VERSION_SEXYAPPFRAMEWORK;
     if (mPalletize != nullptr) mPalletize->Enable();
     if (mMinimizeSubdivisions != nullptr) mMinimizeSubdivisions->Enable();
+    if (mDDSurface != nullptr) mDDSurface->SetLabel("Use a DDSurface");
+
 }
 
 void ResourceFrame::SetFrameworkToResodded(wxCommandEvent& event)
@@ -287,6 +289,7 @@ void ResourceFrame::SetFrameworkToResodded(wxCommandEvent& event)
     mResourceManifest.mFrameworkVersion = FrameworkVersion::VERSION_RESODDEDFRAMEWORK;
     if (mPalletize != nullptr) mPalletize->Disable();
     if (mMinimizeSubdivisions != nullptr) mMinimizeSubdivisions->Disable();
+    if (mDDSurface != nullptr) mDDSurface->SetLabel("Use a GPUSurface");
 }
 
 void ResourceFrame::OnSaveFile(wxCommandEvent& event)
@@ -350,6 +353,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     mNoBits3D = nullptr;
     mNoBits2D = nullptr;
     mNoBits = nullptr;
+    mDDSurface = nullptr;
     mPixelFormats = nullptr;
     mPreviewImage = nullptr;
     mRightPanel->SetSizer(nullptr);
@@ -419,29 +423,34 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(mPalletize, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
 
-
                 mNoBits = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS_BOX, "No Bits");
                 mNoBits->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits);
                 settingsSizer->Add(mNoBits, 0, wxEXPAND | wxALL, 5);
-                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_NOBITS_BOX);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits, this, ID_RESOURCE_NOBITS_BOX);
 
                 mNoBits3D = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS3D_BOX, "No Bits 3D");
                 mNoBits3D->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits3D);
                 settingsSizer->Add(mNoBits3D, 0, wxEXPAND | wxALL, 5);
-                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits, this, ID_RESOURCE_NOBITS3D_BOX);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits3D, this, ID_RESOURCE_NOBITS3D_BOX);
 
                 mNoBits2D = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS2D_BOX, "No Bits 2D");
                 mNoBits2D->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits2D);
                 settingsSizer->Add(mNoBits2D, 0, wxEXPAND | wxALL, 5);
-                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits3D, this, ID_RESOURCE_NOBITS2D_BOX);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits2D, this, ID_RESOURCE_NOBITS2D_BOX);
 
-                mMinimizeSubdivisions = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Minimize Texture Subdivisons:");
+                mMinimizeSubdivisions = new wxCheckBox(settingsPanel, ID_RESOURCE_MINSUBDIVISION_BOX, "Minimize Texture Subdivisons");
                 mMinimizeSubdivisions->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mMinimizeSubdivisions);
                 settingsSizer->Add(mMinimizeSubdivisions, 0, wxEXPAND | wxALL, 5);
-                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits2D, this, ID_RESOURCE_PALLETIZE_BOX);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageMinSubdivision, this, ID_RESOURCE_MINSUBDIVISION_BOX);
+
+                mDDSurface = new wxCheckBox(settingsPanel, ID_RESOURCE_DDSURFACE_BOX, "Use a DDSurface");
+                mDDSurface->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mDDSurface);
+                settingsSizer->Add(mDDSurface, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageDDSurface, this, ID_RESOURCE_DDSURFACE_BOX);
 
                 if (mResourceManifest.mFrameworkVersion == FrameworkVersion::VERSION_RESODDEDFRAMEWORK)
                 {
+                    mDDSurface->SetLabel("Use a GPUSurface");
                     mPalletize->Disable();
                     mMinimizeSubdivisions->Disable();
                 }
@@ -945,6 +954,13 @@ void ResourceFrame::SetImageNoBits2D(wxCommandEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mNoBits2D = mNoBits2D->GetValue();
+}
+
+void ResourceFrame::SetImageDDSurface(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mDDSurface = mDDSurface->GetValue();
 }
 
 void ResourceFrame::SetImageMinSubdivision(wxCommandEvent& event)

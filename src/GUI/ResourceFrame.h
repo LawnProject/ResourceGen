@@ -33,6 +33,7 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_NOBITS3D_BOX,
 		ID_RESOURCE_NOBITS2D_BOX,
 		ID_RESOURCE_MINSUBDIVISION_BOX,
+		ID_RESOURCE_DDSURFACE_BOX,
 		ID_RESOURCE_PIXELFORMAT_BOX,
 		ID_RESOURCE_IDPREFIX_FIELD,
 		ID_FRAMEWORK_SAF = 3001,
@@ -58,6 +59,7 @@ public:
 	wxCheckBox* mNoBits3D = nullptr;
 	wxCheckBox* mNoBits2D = nullptr;
 	wxCheckBox* mNoBits = nullptr;
+	wxCheckBox* mDDSurface = nullptr;
 	wxChoice* mPixelFormats = nullptr;
 
 	//Settings
@@ -119,6 +121,7 @@ private:
 	void SetImageNoBits(wxCommandEvent& event);
 	void SetImageNoBits3D(wxCommandEvent& event);
 	void SetImageNoBits2D(wxCommandEvent& event);
+	void SetImageDDSurface(wxCommandEvent& event);
 	void SetImageMinSubdivision(wxCommandEvent& event);
 	void SetImagePixelFormat(wxCommandEvent& event);
 

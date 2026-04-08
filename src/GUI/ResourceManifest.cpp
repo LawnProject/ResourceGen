@@ -113,6 +113,9 @@ void ResourceManifest::Export(std::string theXMLPath)
 					if (image->mNoBits3D)
 						anImage->SetAttribute("nobits3d", "");
 
+					if (image->mDDSurface)
+						anImage->SetAttribute("ddsurface", "");
+
 					if (image->mPixelFormat != "default")
 						anImage->SetAttribute(image->mPixelFormat.c_str(), "");
 
@@ -198,6 +201,7 @@ void ResourceManifest::Import(std::string theXMLPath)
 				res->mNoBits = child->Attribute("nobits") != 0;
 				res->mNoBits2D = child->Attribute("nobits2d") != 0;
 				res->mNoBits3D = child->Attribute("nobits3d") != 0;
+				res->mDDSurface = child->Attribute("ddsurface") != 0;
 				if (res->mHasAlphaMask)
 					res->mAlphaGrid = child->Attribute("alphagrid");
 
