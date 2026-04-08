@@ -22,8 +22,8 @@ class DefaultSettings : public BaseResource
 class ResourceSound : public BaseResource
 {
 	public:
-		double mVolume = 0.0;
-		int mPanning = 0;
+		double mVolume = -1.0;
+		double mPanning = -1.0;
 };
 class ResourceFont : public BaseResource
 {

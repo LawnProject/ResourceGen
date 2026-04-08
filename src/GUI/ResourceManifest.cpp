@@ -161,18 +161,40 @@ void ResourceManifest::Export(std::string theXMLPath)
 				}
 				case ResourceSubType::TYPE_SOUND:
 				{
-					std::shared_ptr<ResourceSound> image = std::static_pointer_cast<ResourceSound>(element);
-					XMLElement* anImage = aGroup->InsertNewChildElement("Sound");
-					anImage->SetAttribute("id", element->mID.c_str());
-					anImage->SetAttribute("path", element->mPath.c_str());
+					std::shared_ptr<ResourceSound> sound = std::static_pointer_cast<ResourceSound>(element);
+					XMLElement* aSound = aGroup->InsertNewChildElement("Sound");
+					aSound->SetAttribute("id", element->mID.c_str());
+					aSound->SetAttribute("path", element->mPath.c_str());
+
+					if (sound->mVolume != -1.0)
+						aSound->SetAttribute("volume", sound->mVolume);
+
+					if (sound->mPanning != -1.0)
+						aSound->SetAttribute("volume", sound->mPanning);
+
 					break;
 				}
 				case ResourceSubType::TYPE_FONT:
 				{
-					std::shared_ptr<ResourceFont> image = std::static_pointer_cast<ResourceFont>(element);
-					XMLElement* anImage = aGroup->InsertNewChildElement("Sound");
-					anImage->SetAttribute("id", element->mID.c_str());
-					anImage->SetAttribute("path", element->mPath.c_str());
+					std::shared_ptr<ResourceFont> font = std::static_pointer_cast<ResourceFont>(element);
+					XMLElement* aFont = aGroup->InsertNewChildElement("Font");
+					aFont->SetAttribute("id", element->mID.c_str());
+					
+					if (font->mIsSystemFont)
+					{
+						aFont->SetAttribute("path", ("!sys:" + element->mPath).c_str());
+						aFont->SetAttribute("size", font->mSize);
+						if (font->mBold)
+							aFont->SetAttribute("bold", "");
+						if (font->mItalic)
+							aFont->SetAttribute("italic", "");
+						if (font->mShadow)
+							aFont->SetAttribute("shadow", "");
+						if (font->mUnderline)
+							aFont->SetAttribute("underline", "");
+					}
+					else
+						aFont->SetAttribute("path", element->mPath.c_str());
 					break;
 				}
 				case ResourceSubType::TYPE_DEFAULT_SETTINGS:
@@ -287,11 +309,33 @@ void ResourceManifest::Import(std::string theXMLPath)
 			{
 				auto res = AddSound(resourceGroup, resID);
 				res->mPath = resPath;
+
+				if (child->Attribute("volume") != 0)
+					 scanf(child->Attribute("volume"), "%lf", &res->mVolume);
+
+				if (child->Attribute("pan") != 0)
+					scanf(child->Attribute("pan"), "%d", &res->mPanning);
 			}
 			else if (aName == "Font")
 			{
 				auto res = AddFont(resourceGroup, resID);
 				res->mPath = resPath;
+
+				if (res->mPath.rfind("!sys:", 0) == 0)
+				{
+					res->mPath = res->mPath.substr(5);
+					res->mIsSystemFont = true;
+
+					if (child->Attribute("size") != 0)
+						res->mSize = atoi(child->Attribute("size"));
+
+					res->mBold = child->Attribute("bold") != 0;
+					res->mItalic = child->Attribute("italic") != 0;
+					res->mShadow = child->Attribute("shadow") != 0;
+					res->mUnderline = child->Attribute("underline") != 0;
+				}
+				else
+					res->mIsSystemFont = false;
 			}
 		}
 	}

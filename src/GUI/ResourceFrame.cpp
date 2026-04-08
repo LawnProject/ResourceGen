@@ -168,7 +168,30 @@ void ResourceFrame::OnNewFile(wxCommandEvent& event)
     mResourceTree->DeleteAllItems();
     mRoot = mResourceTree->AddRoot("Resource Project");
     mResourceTree->SetItemData(mRoot, new ResourceItemData("ROOT", ResourceType::TYPE_ROOT));
-    mResourceTree->ExpandAll();
+    mResourceTree->ExpandAll();    
+    mRightPanel->DestroyChildren();
+    mAlphaMaskField = nullptr;
+    mAlphaGridField = nullptr;
+    mAlphaColor = nullptr;
+    mNoAlpha = nullptr;
+    mPalletize = nullptr;
+    mMinimizeSubdivisions = nullptr;
+    mNoBits3D = nullptr;
+    mNoBits2D = nullptr;
+    mNoBits = nullptr;
+    mDDSurface = nullptr;
+    mVariantField = nullptr;
+    mPixelFormats = nullptr;
+    mPerFrameDelayField = nullptr;
+    mAnimTypes = nullptr;
+    mFrameMapField = nullptr;
+    mPreviewImage = nullptr;
+    mBold = nullptr;
+    mItalic = nullptr;
+    mShadow = nullptr;
+    mUnderline = nullptr;
+    mStepperSize = nullptr;
+    mRightPanel->SetSizer(nullptr);
 }
 
 void ResourceFrame::OnOpenFile(wxCommandEvent& event)
@@ -362,7 +385,12 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     mPerFrameDelayField = nullptr;
     mAnimTypes = nullptr;
     mFrameMapField = nullptr;
-    mPreviewImage = nullptr;
+    mPreviewImage = nullptr;	
+    mBold = nullptr;
+    mItalic = nullptr;
+    mShadow = nullptr;
+    mUnderline = nullptr;
+    mStepperSize = nullptr;
     mRightPanel->SetSizer(nullptr);
 
     switch (aResourceData->mType)
@@ -585,20 +613,99 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
             }
             case ResourceSubType::TYPE_SOUND:
             {
+                ResourceSound* aSoundData = mResourceManifest.mGroupMap[aResourceData->mParent].GetSound(aResourceData->mID).get();
+
                 settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Sound Settings"), 0);
                 wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
                 pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 pathThing->Add(mPathField, 1);
                 settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+
+
+                wxSpinCtrl* aStepperVol = new wxSpinCtrl(settingsPanel, ID_RESOURCE_VOLUME_STEP);
+                aStepperVol->SetMin(1);
+                wxBoxSizer* colThing = new wxBoxSizer(wxHORIZONTAL);
+                colThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Volume:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                colThing->Add(aStepperVol, 1);
+                settingsSizer->Add(colThing, 0, wxEXPAND | wxALL, 5);
+                aStepperVol->SetValue(aSoundData->mVolume);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetSoundVolume, this, ID_RESOURCE_VOLUME_STEP);
+
+                wxSpinCtrl* aStepperPan = new wxSpinCtrl(settingsPanel, ID_RESOURCE_PANNING_STEP);
+                aStepperPan->SetMin(1);
+                wxBoxSizer* rowThing = new wxBoxSizer(wxHORIZONTAL);
+                rowThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Panning:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                rowThing->Add(aStepperPan, 1);
+                settingsSizer->Add(rowThing, 0, wxEXPAND | wxALL, 5);
+                aStepperPan->SetValue(aSoundData->mPanning);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetSoundPanning, this, ID_RESOURCE_PANNING_STEP);
+
                 break;
             }
             case ResourceSubType::TYPE_FONT:
             {
+                ResourceFont* aFontData = mResourceManifest.mGroupMap[aResourceData->mParent].GetFont(aResourceData->mID).get();
+
                 settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Font Settings"), 0);
                 wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
                 pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 pathThing->Add(mPathField, 1);
                 settingsSizer->Add(pathThing, 0, wxEXPAND | wxALL, 5);
+
+
+                mIsSystemFont = new wxCheckBox(settingsPanel, ID_RESOURCE_FONT_SYS_BOX, "System Font");
+                mIsSystemFont->SetValue(aFontData->mIsSystemFont);
+                settingsSizer->Add(mIsSystemFont, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetFontSys, this, ID_RESOURCE_FONT_SYS_BOX);
+
+                wxStaticLine* settingsLine = new wxStaticLine(settingsPanel, wxID_ANY);
+                settingsSizer->Add(settingsLine, 0, wxEXPAND | wxALL, 5);
+
+                mBold = new wxCheckBox(settingsPanel, ID_RESOURCE_FONT_BOLD_BOX, "Bold");
+                mBold->SetValue(aFontData->mBold);
+                settingsSizer->Add(mBold, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetFontBold, this, ID_RESOURCE_FONT_BOLD_BOX);
+
+                mItalic = new wxCheckBox(settingsPanel, ID_RESOURCE_FONT_ITALIC_BOX, "Italic");
+                mItalic->SetValue(aFontData->mItalic);
+                settingsSizer->Add(mItalic, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetFontItalic, this, ID_RESOURCE_FONT_ITALIC_BOX);
+
+                mShadow = new wxCheckBox(settingsPanel, ID_RESOURCE_FONT_SHADOW_BOX, "Shadow");
+                mShadow->SetValue(aFontData->mShadow);
+                settingsSizer->Add(mShadow, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetFontShadow, this, ID_RESOURCE_FONT_SHADOW_BOX);
+
+                mUnderline = new wxCheckBox(settingsPanel, ID_RESOURCE_FONT_UNDERLINE_BOX, "Underline");
+                mUnderline->SetValue(aFontData->mUnderline);
+                settingsSizer->Add(mUnderline, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetFontUnderline, this, ID_RESOURCE_FONT_UNDERLINE_BOX);
+
+                mStepperSize = new wxSpinCtrl(settingsPanel, ID_RESOURCE_FONT_SIZE_STEP);
+                mStepperSize->SetMin(1);
+                wxBoxSizer* rowThing = new wxBoxSizer(wxHORIZONTAL);
+                rowThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Size:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                rowThing->Add(mStepperSize, 1);
+                settingsSizer->Add(rowThing, 0, wxEXPAND | wxALL, 5);
+                mStepperSize->SetValue(aFontData->mSize);
+                Bind(wxEVT_SPINCTRL, &ResourceFrame::SetFontSize, this, ID_RESOURCE_FONT_SIZE_STEP);
+
+                if (aFontData->mIsSystemFont)
+                {
+                    mBold->Enable();
+                    mItalic->Enable();
+                    mShadow->Enable();
+                    mUnderline->Enable();
+                    mStepperSize->Enable();
+                }
+                else
+                {
+                    mBold->Disable();
+                    mItalic->Disable();
+                    mShadow->Disable();
+                    mUnderline->Disable();
+                    mStepperSize->Disable();
+                }
                 break;
             }
             }
@@ -1143,6 +1250,79 @@ void ResourceFrame::SetDefaultSettingsIDPrefix(wxCommandEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetDefaultSettings(anImageData->mID);
     anImage->mIDPrefix = mIDPrefixField->GetValue();
+}
+
+void ResourceFrame::SetSoundVolume(wxSpinEvent& event)
+{
+    ResourceItemData* aSoundData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aSound = mResourceManifest.mGroupMap[aSoundData->mParent].GetSound(aSoundData->mID);
+    aSound->mVolume = event.GetValue();
+}
+
+void ResourceFrame::SetSoundPanning(wxSpinEvent& event)
+{
+    ResourceItemData* aSoundData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aSound = mResourceManifest.mGroupMap[aSoundData->mParent].GetSound(aSoundData->mID);
+    aSound->mPanning = event.GetValue();
+}
+
+void ResourceFrame::SetFontSys(wxCommandEvent& event)
+{
+    ResourceItemData* aFontData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aFont = mResourceManifest.mGroupMap[aFontData->mParent].GetFont(aFontData->mID);
+    aFont->mIsSystemFont = mIsSystemFont->GetValue();
+    if (aFont->mIsSystemFont)
+    {
+        mBold->Enable();
+        mItalic->Enable();
+        mShadow->Enable();
+        mUnderline->Enable();
+        mStepperSize->Enable();
+    }
+    else
+    {
+        mBold->Disable();
+        mItalic->Disable();
+        mShadow->Disable();
+        mUnderline->Disable();
+        mStepperSize->Disable();
+    }
+    
+}
+
+void ResourceFrame::SetFontSize(wxSpinEvent& event)
+{
+    ResourceItemData* aFontData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aFont = mResourceManifest.mGroupMap[aFontData->mParent].GetFont(aFontData->mID);
+    aFont->mSize = event.GetValue();
+}
+
+void ResourceFrame::SetFontBold(wxCommandEvent& event)
+{
+    ResourceItemData* aFontData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aFont = mResourceManifest.mGroupMap[aFontData->mParent].GetFont(aFontData->mID);
+    aFont->mBold = mBold->GetValue();
+}
+
+void ResourceFrame::SetFontItalic(wxCommandEvent& event)
+{
+    ResourceItemData* aFontData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aFont = mResourceManifest.mGroupMap[aFontData->mParent].GetFont(aFontData->mID);
+    aFont->mItalic = mItalic->GetValue();
+}
+
+void ResourceFrame::SetFontShadow(wxCommandEvent& event)
+{
+    ResourceItemData* aFontData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aFont = mResourceManifest.mGroupMap[aFontData->mParent].GetFont(aFontData->mID);
+    aFont->mShadow = mShadow->GetValue();
+}
+
+void ResourceFrame::SetFontUnderline(wxCommandEvent& event)
+{
+    ResourceItemData* aFontData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto aFont = mResourceManifest.mGroupMap[aFontData->mParent].GetFont(aFontData->mID);
+    aFont->mUnderline = mUnderline->GetValue();
 }
 
 void ResourceFrame::AddGroupImpl(std::string theName)

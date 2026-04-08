@@ -45,6 +45,14 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_PERFRAMEDELAY_FIELD,
 		ID_RESOURCE_FRAMEMAP_FIELD,
 		ID_RESOURCE_IDPREFIX_FIELD,
+		ID_RESOURCE_VOLUME_STEP,
+		ID_RESOURCE_PANNING_STEP,
+		ID_RESOURCE_FONT_SYS_BOX,
+		ID_RESOURCE_FONT_BOLD_BOX,
+		ID_RESOURCE_FONT_ITALIC_BOX,
+		ID_RESOURCE_FONT_SHADOW_BOX,
+		ID_RESOURCE_FONT_UNDERLINE_BOX,
+		ID_RESOURCE_FONT_SIZE_STEP,
 		ID_FRAMEWORK_SAF = 3001,
 		ID_FRAMEWORK_RESODDEDFRAMEWORK,
 	};
@@ -60,7 +68,7 @@ public:
 
 	wxTextCtrl* mPathField = nullptr;
 
-	//Image
+	// Image
 	wxTextCtrl* mAlphaMaskField = nullptr;
 	wxTextCtrl* mAlphaGridField = nullptr;
 	wxTextCtrl* mAlphaColor = nullptr;
@@ -78,11 +86,17 @@ public:
 	wxTextCtrl* mPerFrameDelayField = nullptr;
 	wxTextCtrl* mFrameMapField = nullptr;
 
-
-
-	//Settings
+	// Settings
 	wxTextCtrl* mIDPrefixField;
 
+	// Font
+
+	wxCheckBox* mIsSystemFont = nullptr;
+	wxCheckBox* mBold = nullptr;
+	wxCheckBox* mItalic = nullptr;
+	wxCheckBox* mShadow = nullptr;
+	wxCheckBox* mUnderline = nullptr;
+	wxSpinCtrl* mStepperSize = nullptr;
 
 	std::map<std::string, wxTreeItemId> mItems;
 	wxTreeCtrl* mResourceTree;
@@ -130,7 +144,7 @@ private:
 
 	void SetResourcePath(wxCommandEvent& event);
 
-	//Image functions
+	// Image functions
 	void SetImageColumns(wxSpinEvent& event);
 	void SetImageRow(wxSpinEvent& event);
 	void SetImageVariant(wxCommandEvent& event);
@@ -152,6 +166,20 @@ private:
 	void SetImagePerFrameDelay(wxCommandEvent& event);
 	void SetImageFrameMap(wxCommandEvent& event);
 
-	//Setting functions
+	// Setting functions
 	void SetDefaultSettingsIDPrefix(wxCommandEvent& event);
+
+	// Sound Functions
+
+	void SetSoundVolume(wxSpinEvent& event);
+	void SetSoundPanning(wxSpinEvent& event);
+
+	// Font Functions
+
+	void SetFontSys(wxCommandEvent& event);
+	void SetFontSize(wxSpinEvent& event);
+	void SetFontBold(wxCommandEvent& event);
+	void SetFontItalic(wxCommandEvent& event);
+	void SetFontShadow(wxCommandEvent& event);
+	void SetFontUnderline(wxCommandEvent& event);
 };
