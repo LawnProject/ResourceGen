@@ -41,6 +41,7 @@ class ResourceImage : public BaseResource
 		std::string mAlphaMask = "";
 		std::string mAlphaGrid = "";
 		std::string mAlphaColor = "";
+		std::string mVariant = "";
 		int mRows = 1;
 		int mCols = 1;
 		std::string mPixelFormat = "default";

@@ -3,6 +3,7 @@
 #include "ResourceSourceGen.h"
 #include <wx/treectrl.h>
 #include <wx/spinctrl.h>
+#include <wx/statline.h>
 #include <wx/splitter.h>
 #include <filesystem>
 #include <wx/textfile.h>
@@ -356,6 +357,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     mNoBits2D = nullptr;
     mNoBits = nullptr;
     mDDSurface = nullptr;
+    mVariantField = nullptr;
     mPixelFormats = nullptr;
     mPreviewImage = nullptr;
     mRightPanel->SetSizer(nullptr);
@@ -384,7 +386,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
             {
             case ResourceSubType::TYPE_IMAGE:
             {
-                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Image settings"), 0);
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Image Settings"), 0);
                 wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
                 pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 pathThing->Add(mPathField, 1);
@@ -406,6 +408,9 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(rowThing, 0, wxEXPAND | wxALL, 5);
                 aStepperRow->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mRows);
                 Bind(wxEVT_SPINCTRL, &ResourceFrame::SetImageRow, this, ID_RESOURCE_STEP_ROW);
+
+                wxStaticLine* alphaLine = new wxStaticLine(settingsPanel, wxID_ANY);
+                settingsSizer->Add(alphaLine, 0, wxEXPAND | wxALL, 5);
 
                 mAlphaMaskField = new wxTextCtrl(settingsPanel, ID_RESOURCE_ALPHA_MASK_FIELD);
                 wxBoxSizer* alpha1Thing = new wxBoxSizer(wxHORIZONTAL);
@@ -436,6 +441,9 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(mNoAlpha, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_NO_ALPHA_BOX);
 
+                wxStaticLine* formatLine = new wxStaticLine(settingsPanel, wxID_ANY);
+                settingsSizer->Add(formatLine, 0, wxEXPAND | wxALL, 5);
+
                 mPalletize = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Palletize");
                 mPalletize->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPalletize);
                 settingsSizer->Add(mPalletize, 0, wxEXPAND | wxALL, 5);
@@ -456,6 +464,16 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(mNoBits2D, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits2D, this, ID_RESOURCE_NOBITS2D_BOX);
 
+                wxArrayString aFormatVec = { "default", "a4r4g4b4", "a8r8g8b8" };
+                mPixelFormats = new wxChoice(settingsPanel, ID_RESOURCE_PIXELFORMAT_BOX, wxDefaultPosition, wxDefaultSize, aFormatVec);
+                wxString aFormatString = mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPixelFormat;
+                mPixelFormats->SetSelection(mPixelFormats->FindString(aFormatString));
+                wxBoxSizer* pixelThing = new wxBoxSizer(wxHORIZONTAL);
+                pixelThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Pixel Format:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                pixelThing->Add(mPixelFormats, 1);
+                settingsSizer->Add(pixelThing, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHOICE, &ResourceFrame::SetImagePixelFormat, this, ID_RESOURCE_PIXELFORMAT_BOX);
+
                 mMinimizeSubdivisions = new wxCheckBox(settingsPanel, ID_RESOURCE_MINSUBDIVISION_BOX, "Minimize Texture Subdivisons");
                 mMinimizeSubdivisions->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mMinimizeSubdivisions);
                 settingsSizer->Add(mMinimizeSubdivisions, 0, wxEXPAND | wxALL, 5);
@@ -466,6 +484,20 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 settingsSizer->Add(mDDSurface, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageDDSurface, this, ID_RESOURCE_DDSURFACE_BOX);
 
+                wxStaticLine* miscLine = new wxStaticLine(settingsPanel, wxID_ANY);
+                settingsSizer->Add(miscLine, 0, wxEXPAND | wxALL, 5);
+
+                mVariantField = new wxTextCtrl(settingsPanel, ID_RESOURCE_VARIANT_FIELD);
+                wxBoxSizer* variantThing = new wxBoxSizer(wxHORIZONTAL);
+                variantThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Variant:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+                variantThing->Add(mVariantField, 1);
+                settingsSizer->Add(variantThing, 0, wxEXPAND | wxALL, 5);
+                mVariantField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mVariant);
+                Bind(wxEVT_TEXT, &ResourceFrame::SetImageVariant, this, ID_RESOURCE_VARIANT_FIELD);
+
+                wxStaticLine* animLine = new wxStaticLine(settingsPanel, wxID_ANY);
+                settingsSizer->Add(animLine, 0, wxEXPAND | wxALL, 5);
+
                 if (mResourceManifest.mFrameworkVersion == FrameworkVersion::VERSION_RESODDEDFRAMEWORK)
                 {
                     mDDSurface->SetLabel("Use a GPUSurface");
@@ -473,22 +505,12 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                     mMinimizeSubdivisions->Disable();
                 }
 
-                wxArrayString aFormatVec = {"default", "a4r4g4b4", "a8r8g8b8"};
-                mPixelFormats = new wxChoice(settingsPanel, ID_RESOURCE_PIXELFORMAT_BOX, wxDefaultPosition, wxDefaultSize, aFormatVec);
-                wxString aFormatString = mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPixelFormat;
-                mPixelFormats->SetSelection(mPixelFormats->FindString(aFormatString));
-                wxBoxSizer* pixelThing = new wxBoxSizer(wxHORIZONTAL);
-                pixelThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Pixel Format:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-                pixelThing->Add(mPixelFormats, 1);
-                settingsSizer->Add(pixelThing, 0, wxEXPAND | wxALL, 5);
-                Bind(wxEVT_CHOICE, &ResourceFrame::SetImagePixelFormat, this, ID_RESOURCE_PIXELFORMAT_BOX);
-
 
                 break;
             }
             case ResourceSubType::TYPE_DEFAULT_SETTINGS:
             {
-                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Default settings"), 0);
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Default Settings"), 0);
                 mIDPrefixField = new wxTextCtrl(settingsPanel, ID_RESOURCE_IDPREFIX_FIELD);
                 wxBoxSizer* prefixThing = new wxBoxSizer(wxHORIZONTAL);
                 prefixThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "ID Prefix:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
@@ -504,7 +526,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
             }
             case ResourceSubType::TYPE_SOUND:
             {
-                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Sound settings"), 0);
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Sound Settings"), 0);
                 wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
                 pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 pathThing->Add(mPathField, 1);
@@ -513,7 +535,7 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
             }
             case ResourceSubType::TYPE_FONT:
             {
-                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Font settings"), 0);
+                settingsSizer->Add(new wxStaticText(settingsPanel, wxID_ANY, "Font Settings"), 0);
                 wxBoxSizer* pathThing = new wxBoxSizer(wxHORIZONTAL);
                 pathThing->Add(new wxStaticText(settingsPanel, wxID_ANY, "Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
                 pathThing->Add(mPathField, 1);
@@ -936,6 +958,13 @@ void ResourceFrame::SetImageAlphaMask(wxCommandEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mAlphaMask = mAlphaMaskField->GetValue();
+}
+
+void ResourceFrame::SetImageVariant(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mVariant = mVariantField->GetValue();
 }
 
 void ResourceFrame::SetImageAlphaGrid(wxCommandEvent& event)

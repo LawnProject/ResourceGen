@@ -37,6 +37,7 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_MINSUBDIVISION_BOX,
 		ID_RESOURCE_DDSURFACE_BOX,
 		ID_RESOURCE_PIXELFORMAT_BOX,
+		ID_RESOURCE_VARIANT_FIELD,
 		ID_RESOURCE_IDPREFIX_FIELD,
 		ID_FRAMEWORK_SAF = 3001,
 		ID_FRAMEWORK_RESODDEDFRAMEWORK,
@@ -65,6 +66,8 @@ public:
 	wxCheckBox* mNoBits = nullptr;
 	wxCheckBox* mDDSurface = nullptr;
 	wxChoice* mPixelFormats = nullptr;
+	wxTextCtrl* mVariantField = nullptr;
+
 
 	//Settings
 	wxTextCtrl* mIDPrefixField;
@@ -119,6 +122,7 @@ private:
 	//Image functions
 	void SetImageColumns(wxSpinEvent& event);
 	void SetImageRow(wxSpinEvent& event);
+	void SetImageVariant(wxCommandEvent& event);
 	void SetImageAlphaMask(wxCommandEvent& event);
 	void SetImageAlphaGrid(wxCommandEvent& event);
 	void SetImageAlphaColor(wxCommandEvent& event);

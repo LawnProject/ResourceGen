@@ -110,6 +110,9 @@ void ResourceManifest::Export(std::string theXMLPath)
 							anImage->SetAttribute("nopal", "");
 					}
 
+					if (!image->mVariant.empty())
+						anImage->SetAttribute("variant", image->mVariant.c_str());
+
 					if (image->mNoBits)
 						anImage->SetAttribute("nobits", "");
 
@@ -207,6 +210,9 @@ void ResourceManifest::Import(std::string theXMLPath)
 				res->mNoBits2D = child->Attribute("nobits2d") != 0;
 				res->mNoBits3D = child->Attribute("nobits3d") != 0;
 				res->mDDSurface = child->Attribute("ddsurface") != 0;
+
+				if (child->Attribute("variant") != 0)
+					res->mVariant = child->Attribute("variant");
 
 				if (child->Attribute("alphagrid") != 0)
 					res->mAlphaGrid = child->Attribute("alphagrid");
