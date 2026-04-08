@@ -10,7 +10,7 @@ A: Yes, however if you find exceptions, please create an Issue.
 
 2. Q: Does it work on every SexyAppFramework project?
 
-A: Yes.
+A: Yes, unless there were changes made to the resource system.
 
 ## How to use?
 1. Open the Resource Manifest file in File -> Open or Create a new one in File -> New

@@ -311,10 +311,13 @@ void ResourceManifest::Import(std::string theXMLPath)
 				res->mPath = resPath;
 
 				if (child->Attribute("volume") != 0)
-					 scanf(child->Attribute("volume"), "%lf", &res->mVolume);
+				{
+					res->mVolume = atof(child->Attribute("volume"));
+				}
+					 
 
 				if (child->Attribute("pan") != 0)
-					scanf(child->Attribute("pan"), "%d", &res->mPanning);
+					res->mPanning = atof(child->Attribute("volume"));
 			}
 			else if (aName == "Font")
 			{

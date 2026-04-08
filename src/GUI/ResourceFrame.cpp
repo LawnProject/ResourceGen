@@ -69,7 +69,7 @@ void CollectExpandedItems(wxTreeCtrl* tree, wxTreeItemId root, std::vector<std::
 
 
 ResourceFrame::ResourceFrame()
-    : wxFrame(NULL, wxID_ANY, "ResourceGen - LawnProject - Alpha 1.0.0", wxDefaultPosition, wxSize(800, 500))
+    : wxFrame(NULL, wxID_ANY, "ResourceGen - a1.0.1", wxDefaultPosition, wxSize(800, 500))
 {
     wxInitAllImageHandlers();
 
