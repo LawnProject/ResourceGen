@@ -342,6 +342,15 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
     ResourceItemData* aResourceData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     mRightPanel->Freeze();
     mRightPanel->DestroyChildren(); 
+    //Manually null them here
+    mAlphaField = nullptr;
+    mNoAlpha = nullptr;
+    mPalletize = nullptr;
+    mMinimizeSubdivisions = nullptr;
+    mNoBits3D = nullptr;
+    mNoBits2D = nullptr;
+    mNoBits = nullptr;
+    mPixelFormats = nullptr;
     mPreviewImage = nullptr;
     mRightPanel->SetSizer(nullptr);
 
@@ -400,20 +409,36 @@ void ResourceFrame::OnTreeClick(wxTreeEvent& event)
                 mAlphaField->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mAlphaGrid);
                 Bind(wxEVT_TEXT, &ResourceFrame::SetImageAlphaGrid, this, ID_RESOURCE_ALPHA_FIELD);
 
-                mNoAlpha = new wxCheckBox(settingsPanel, ID_RESOURCE_NO_ALPHA_BOX, "No Alpha:");
+                mNoAlpha = new wxCheckBox(settingsPanel, ID_RESOURCE_NO_ALPHA_BOX, "No Alpha");
                 mNoAlpha->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoAlpha);
                 settingsSizer->Add(mNoAlpha, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_NO_ALPHA_BOX);
 
-                mPalletize = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Palletize:");
+                mPalletize = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Palletize");
                 mPalletize->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mPalletize);
                 settingsSizer->Add(mPalletize, 0, wxEXPAND | wxALL, 5);
                 Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
 
+
+                mNoBits = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS_BOX, "No Bits");
+                mNoBits->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits);
+                settingsSizer->Add(mNoBits, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_NOBITS_BOX);
+
+                mNoBits3D = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS3D_BOX, "No Bits 3D");
+                mNoBits3D->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits3D);
+                settingsSizer->Add(mNoBits3D, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits, this, ID_RESOURCE_NOBITS3D_BOX);
+
+                mNoBits2D = new wxCheckBox(settingsPanel, ID_RESOURCE_NOBITS2D_BOX, "No Bits 2D");
+                mNoBits2D->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mNoBits2D);
+                settingsSizer->Add(mNoBits2D, 0, wxEXPAND | wxALL, 5);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits3D, this, ID_RESOURCE_NOBITS2D_BOX);
+
                 mMinimizeSubdivisions = new wxCheckBox(settingsPanel, ID_RESOURCE_PALLETIZE_BOX, "Minimize Texture Subdivisons:");
                 mMinimizeSubdivisions->SetValue(mResourceManifest.mGroupMap[aResourceData->mParent].GetImage(aResourceData->mID)->mMinimizeSubdivisions);
                 settingsSizer->Add(mMinimizeSubdivisions, 0, wxEXPAND | wxALL, 5);
-                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoAlpha, this, ID_RESOURCE_PALLETIZE_BOX);
+                Bind(wxEVT_CHECKBOX, &ResourceFrame::SetImageNoBits2D, this, ID_RESOURCE_PALLETIZE_BOX);
 
                 if (mResourceManifest.mFrameworkVersion == FrameworkVersion::VERSION_RESODDEDFRAMEWORK)
                 {
@@ -866,7 +891,8 @@ void ResourceFrame::SetImageColumns(wxSpinEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mCols = event.GetValue();
-    mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
+    if (mPreviewImage != nullptr)
+        mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
 }
 
 void ResourceFrame::SetImageRow(wxSpinEvent& event)
@@ -874,7 +900,8 @@ void ResourceFrame::SetImageRow(wxSpinEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mRows = event.GetValue();
-    mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
+    if (mPreviewImage != nullptr)
+        mPreviewImage->SetGridSize(anImage->mRows, anImage->mCols);
 }
 
 void ResourceFrame::SetImageAlphaGrid(wxCommandEvent& event)
@@ -897,6 +924,27 @@ void ResourceFrame::SetImagePalletize(wxCommandEvent& event)
     ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
     auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
     anImage->mPalletize = mPalletize->GetValue();
+}
+
+void ResourceFrame::SetImageNoBits(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mNoBits = mNoBits->GetValue();
+}
+
+void ResourceFrame::SetImageNoBits3D(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mNoBits3D = mNoBits3D->GetValue();
+}
+
+void ResourceFrame::SetImageNoBits2D(wxCommandEvent& event)
+{
+    ResourceItemData* anImageData = (ResourceItemData*)mResourceTree->GetItemData(mCurrentResource);
+    auto anImage = mResourceManifest.mGroupMap[anImageData->mParent].GetImage(anImageData->mID);
+    anImage->mNoBits2D = mNoBits2D->GetValue();
 }
 
 void ResourceFrame::SetImageMinSubdivision(wxCommandEvent& event)

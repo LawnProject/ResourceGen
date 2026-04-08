@@ -104,6 +104,15 @@ void ResourceManifest::Export(std::string theXMLPath)
 							anImage->SetAttribute("nopal", "");
 					}
 
+					if (image->mNoBits)
+						anImage->SetAttribute("nobits", "");
+
+					if (image->mNoBits2D)
+						anImage->SetAttribute("nobits2d", "");
+
+					if (image->mNoBits3D)
+						anImage->SetAttribute("nobits3d", "");
+
 					if (image->mPixelFormat != "default")
 						anImage->SetAttribute(image->mPixelFormat.c_str(), "");
 
@@ -186,6 +195,9 @@ void ResourceManifest::Import(std::string theXMLPath)
 				res->mPalletize = child->Attribute("nopal") == 0;
 				res->mMinimizeSubdivisions = child->Attribute("minsubdivide") != 0;
 				res->mNoAlpha = child->Attribute("noalpha") != 0;
+				res->mNoBits = child->Attribute("nobits") != 0;
+				res->mNoBits2D = child->Attribute("nobits2d") != 0;
+				res->mNoBits3D = child->Attribute("nobits3d") != 0;
 				if (res->mHasAlphaMask)
 					res->mAlphaGrid = child->Attribute("alphagrid");
 

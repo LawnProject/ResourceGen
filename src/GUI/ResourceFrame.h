@@ -29,6 +29,9 @@ class ResourceFrame : public wxFrame
 		ID_RESOURCE_ALPHA_FIELD,
 		ID_RESOURCE_NO_ALPHA_BOX,
 		ID_RESOURCE_PALLETIZE_BOX,
+		ID_RESOURCE_NOBITS_BOX,
+		ID_RESOURCE_NOBITS3D_BOX,
+		ID_RESOURCE_NOBITS2D_BOX,
 		ID_RESOURCE_MINSUBDIVISION_BOX,
 		ID_RESOURCE_PIXELFORMAT_BOX,
 		ID_RESOURCE_IDPREFIX_FIELD,
@@ -52,6 +55,9 @@ public:
 	wxCheckBox* mNoAlpha = nullptr;
 	wxCheckBox* mPalletize = nullptr;
 	wxCheckBox* mMinimizeSubdivisions = nullptr;
+	wxCheckBox* mNoBits3D = nullptr;
+	wxCheckBox* mNoBits2D = nullptr;
+	wxCheckBox* mNoBits = nullptr;
 	wxChoice* mPixelFormats = nullptr;
 
 	//Settings
@@ -110,6 +116,9 @@ private:
 	void SetImageAlphaGrid(wxCommandEvent& event);
 	void SetImageNoAlpha(wxCommandEvent& event);
 	void SetImagePalletize(wxCommandEvent& event);
+	void SetImageNoBits(wxCommandEvent& event);
+	void SetImageNoBits3D(wxCommandEvent& event);
+	void SetImageNoBits2D(wxCommandEvent& event);
 	void SetImageMinSubdivision(wxCommandEvent& event);
 	void SetImagePixelFormat(wxCommandEvent& event);
 

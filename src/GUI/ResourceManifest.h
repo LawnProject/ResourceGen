@@ -46,6 +46,9 @@ class ResourceImage : public BaseResource
 		bool mNoAlpha = false;
 		bool mPalletize = false;
 		bool mMinimizeSubdivisions = false;
+		bool mNoBits3D = false;
+		bool mNoBits2D = false;
+		bool mNoBits = false;
 };
 
 struct ResourceGroup
